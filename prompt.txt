@@ -1,0 +1,78 @@
+check the html file and tell me how should we go about this, the goal is this: if i have a pile of papers mostly just scanned first page passports , and visa pages. with additional information like phone number, email if the guy paid of not, plus extra notes, and the type of visa application (1st demand, or renewing ...etc) the piles are four (sections) (1st demand, renewing, family visit, an affaire... potentially more) i want a tool (or we build it) that will allow me to get rid of these paper managment and make it all numeric and searchable by (last name, number, passport number...etc), some entries are bundeled together like a family all having to do a visa (the father for example will be the primary and only 1 email and one phone number for and paid or not for whole group) so there should e a way to make it in a group and one is primary (the target visa is for algerians wanting to travel aborad for now the focus is France (capago) and later to customize and add diffrent countries), when i click the new entry there is a backend that gets the information from the MRZ using python libraries like (PassportEye, MRZ, OpenCV + Tesseract) and autofils the areas, i also need the other areas to be filled and OCR the whole passport page we'll use PaddleOCR, would look something like this:
+OpenCV for image preprocessing (deskewing, cropping, denoising)
+PaddleOCR for extracting text from the page
+PassportEye (or another MRZ parser) for reading the MRZ
+Python dictionaries or regular expressions to map OCR output to fields
+A frontend to populate text boxes 
+
+first set the file structure and lets set up github repo
+
+
+walk me through what to do step by step and put it in a to do list as task to do each day not all today, to ensure we build it properly, and if anyhting that requires me to step in like stuff related to firebase, adding manually...etc just tell me in clear step by step instructions and i will perform it 
+
+
+Quick architecture (edit if theres a better alternate way)
+
+
+
+
+
+Firestore – store each application as a document with fields: lastName, firstName, passportNumber, phone, email, paid or not paid yet visaType (first_demand, renewing, family_visit, affaire, …), notes, scanURLs (array of download links to the images).
+
+
+
+Firebase Storage – upload the scanned pages; automatically get a public (or signed) URL to save in Firestore.
+
+
+
+Firebase Auth – create accounts manually for you and your coworker (email/password). The static site can’t be seen without login.
+
+
+
+Frontend – A single HTML file (or a few) with a search bar, a form to add new records + drag‑and‑drop image upload. Use the Firebase Web SDK (loaded from a CDN).
+
+All of this stays within Firebase’s permanent free tier (Spark plan) for your scale.
+
+How to build it (rough steps)
+
+
+
+
+
+Create a Firebase project, enable Firestore, Storage, and Email/Password auth.
+
+
+
+In the Firebase console, manually add two users (you and your coworker).
+
+
+
+Write a simple index.html that includes the Firebase SDK scripts, a login screen, and a dashboard with:
+
+
+
+
+
+An “Add Record” form
+
+
+
+A search input that queries Firestore (e.g., where("lastName", ">=", searchTerm))
+
+
+
+A table of results with links to open the scanned images
+
+
+
+Push the static files to a private GitHub repository. Enable GitHub Pages – the site is public by URL but protected by the login screen.
+
+
+
+You may also set a very simple passphrase in the HTML if you want an extra layer (not true security, but enough to stop random visitors from seeing the login form).
+
+
+
+In short: For a free, two‑person or three, internet‑accessible paper‑management tool on GitHub Pages, use Firebase Firestore + Firebase Storage + Firebase Auth. It’s the closest you’ll get to a “local” feel while actually being usable by both of you
+
+opencode -s ses_09dfde7b1ffeZ4B4jpmC6OILaY

@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dossier — Visa &amp; Passport Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2B4A;
+    --ink-soft:#3A4A6B;
+    --paper:#EEEDE5;
+    --paper-raised:#F8F7F2;
+    --line:#D8D5C8;
+    --stamp-red:#A63D2F;
+    --stamp-green:#3F5D4D;
+    --cat-first:#35507A;
+    --cat-renewal:#B5822E;
+    --cat-family:#3F7368;
+    --cat-affair:#6B4468;
+    --cat-other:#5A5A52;
+    --shadow: 0 1px 2px rgba(28,43,74,0.08), 0 4px 12px rgba(28,43,74,0.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:1180px;margin:0 auto;padding:28px 24px 60px;}
+
+  /* Header */
+  .masthead{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:16px;margin-bottom:22px;
+    flex-wrap:wrap;gap:12px;
+  }
+  .masthead h1{
+    font-family:'Spectral',serif;font-weight:700;font-size:28px;margin:0;
+    letter-spacing:-0.01em;
+  }
+  .masthead .sub{font-size:12.5px;color:var(--ink-soft);margin-top:4px;letter-spacing:0.02em;}
+  .masthead .meta{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);
+    text-align:right;line-height:1.6;
+  }
+
+  /* Toolbar */
+  .toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+  .search-wrap{position:relative;flex:1;min-width:220px;}
+  .search-wrap input{
+    width:100%;padding:10px 12px 10px 34px;border:1px solid var(--line);
+    border-radius:6px;background:var(--paper-raised);font-size:14px;color:var(--ink);
+    font-family:'Inter',sans-serif;
+  }
+  .search-wrap input:focus{outline:2px solid var(--ink);outline-offset:1px;}
+  .search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:0.5;}
+  .btn{
+    font-family:'Inter',sans-serif;font-size:13.5px;font-weight:600;
+    border:1px solid var(--ink);background:var(--ink);color:var(--paper-raised);
+    padding:10px 16px;border-radius:6px;cursor:pointer;white-space:nowrap;
+  }
+  .btn:hover{background:var(--ink-soft);}
+  .btn.secondary{background:transparent;color:var(--ink);border:1px solid var(--line);}
+  .btn.secondary:hover{border-color:var(--ink);}
+  .btn:focus-visible{outline:2px solid var(--stamp-red);outline-offset:2px;}
+
+  /* Folder tabs */
+  .tabs{display:flex;gap:4px;margin-bottom:0;flex-wrap:wrap;align-items:flex-end;}
+  .tab{
+    font-family:'Inter',sans-serif;font-size:13px;font-weight:600;
+    padding:10px 16px 9px;border-radius:8px 8px 0 0;cursor:pointer;
+    background:#E4E1D5;color:var(--ink-soft);border:1px solid var(--line);border-bottom:none;
+    position:relative;top:1px;
+  }
+  .tab .count{
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    background:rgba(0,0,0,0.08);padding:1px 6px;border-radius:10px;margin-left:6px;
+  }
+  .tab.active{background:var(--paper-raised);color:var(--ink);border-bottom:1px solid var(--paper-raised);}
+  .tab[data-cat="first"].active{border-top:3px solid var(--cat-first);}
+  .tab[data-cat="renewal"].active{border-top:3px solid var(--cat-renewal);}
+  .tab[data-cat="family"].active{border-top:3px solid var(--cat-family);}
+  .tab[data-cat="affair"].active{border-top:3px solid var(--cat-affair);}
+  .tab[data-cat="all"].active{border-top:3px solid var(--ink);}
+  .tab.add-tab{background:transparent;border:1px dashed var(--line);color:var(--ink-soft);font-weight:500;}
+
+  .archive{
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:0 8px 8px 8px;
+    padding:0;box-shadow:var(--shadow);
+  }
+
+  /* Table */
+  table{width:100%;border-collapse:collapse;}
+  thead th{
+    text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:0.06em;
+    color:var(--ink-soft);font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line);
+  }
+  tbody tr{border-bottom:1px solid #EAE8DE;cursor:pointer;}
+  tbody tr:hover{background:#F2F0E6;}
+  tbody td{padding:12px 14px;font-size:13.5px;vertical-align:middle;}
+  td.mono{font-family:'IBM Plex Mono',monospace;font-size:12.5px;color:var(--ink-soft);}
+  .name-cell{font-weight:600;}
+  .badge{
+    display:inline-block;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:4px;
+    color:#fff;letter-spacing:0.02em;
+  }
+  .row-actions{display:flex;gap:6px;justify-content:flex-end;}
+  .row-actions button{
+    font-family:'Inter',sans-serif;font-size:11.5px;font-weight:600;
+    background:transparent;border:1px solid var(--line);border-radius:5px;
+    padding:5px 9px;cursor:pointer;color:var(--ink-soft);
+  }
+  .row-actions button:hover{border-color:var(--ink);color:var(--ink);}
+  .row-actions button.del:hover{border-color:var(--stamp-red);color:var(--stamp-red);}
+
+  .empty-state{padding:50px 20px;text-align:center;color:var(--ink-soft);}
+  .empty-state .stamp{
+    font-family:'IBM Plex Mono',monospace;display:inline-block;border:2px dashed var(--line);
+    padding:14px 22px;border-radius:8px;transform:rotate(-2deg);font-size:12.5px;margin-bottom:12px;
+  }
+
+  /* Modal */
+  .overlay{
+    position:fixed;inset:0;background:rgba(28,43,74,0.45);display:none;
+    align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;
+  }
+  .overlay.open{display:flex;}
+  .card{
+    background:var(--paper-raised);border-radius:10px;max-width:560px;width:100%;
+    box-shadow:0 20px 50px rgba(0,0,0,0.25);border:1px solid var(--line);
+  }
+  .card-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:18px 22px;border-bottom:1px solid var(--line);
+  }
+  .card-head h2{font-family:'Spectral',serif;font-size:19px;margin:0;font-weight:600;}
+  .card-head button{background:none;border:none;font-size:20px;cursor:pointer;color:var(--ink-soft);line-height:1;}
+  .card-body{padding:20px 22px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .field-row.tri{grid-template-columns:1fr 1fr 1fr;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field.full{grid-column:1/-1;}
+  .section-label{
+    display:flex;align-items:center;gap:8px;margin:18px 0 10px;
+    font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;
+    letter-spacing:0.08em;color:var(--ink-soft);
+  }
+  .section-label:first-child{margin-top:0;}
+  .section-label::after{content:'';flex:1;height:1px;background:var(--line);}
+  .passport-block{
+    border:1px solid var(--line);border-radius:8px;padding:14px 14px 2px;background:#FBFAF6;
+    position:relative;
+  }
+  .passport-block::before{
+    content:'PASSPORT';position:absolute;top:-9px;left:12px;background:var(--paper-raised);
+    padding:0 6px;font-family:'IBM Plex Mono',monospace;font-size:9.5px;letter-spacing:0.1em;
+    color:var(--ink-soft);
+  }
+  .scan-zone{
+    border:2px dashed var(--ink-soft);border-radius:8px;padding:16px;text-align:center;
+    background:#F4F3EC;cursor:pointer;margin-bottom:16px;
+  }
+  .scan-zone:hover{border-color:var(--ink);}
+  .scan-zone .title{font-weight:600;font-size:13.5px;margin-bottom:2px;}
+  .scan-zone .hint{font-size:11.5px;color:var(--ink-soft);}
+  .scan-status{
+    font-family:'IBM Plex Mono',monospace;font-size:11.5px;margin-top:8px;min-height:14px;
+  }
+  .scan-status.ok{color:var(--stamp-green);}
+  .scan-status.warn{color:var(--stamp-red);}
+  .scan-status.busy{color:var(--ink-soft);}
+  .field.verified input{border-color:var(--stamp-green);background:#F3F8F5;}
+  .field.unverified input{border-color:var(--stamp-red);background:#FBF4F3;}
+  .field label{font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;}
+  .field input,.field select,.field textarea{
+    padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;
+    font-family:'Inter',sans-serif;background:#fff;color:var(--ink);
+  }
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--ink);outline-offset:0;}
+  .field textarea{resize:vertical;min-height:56px;}
+  .attach-box{
+    border:1px dashed var(--line);border-radius:8px;padding:14px;text-align:center;
+    font-size:12.5px;color:var(--ink-soft);cursor:pointer;background:#fafaf6;
+  }
+  .attach-box img{max-width:100%;max-height:180px;border-radius:6px;margin-top:8px;display:block;margin-left:auto;margin-right:auto;}
+  .card-foot{
+    padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;
+  }
+  .card-foot .left{display:flex;gap:8px;}
+
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:6px;font-size:13px;
+    box-shadow:0 8px 20px rgba(0,0,0,0.2);opacity:0;pointer-events:none;transition:opacity .25s;z-index:100;
+    font-family:'Inter',sans-serif;
+  }
+  .toast.show{opacity:1;}
+
+  @media(max-width:640px){
+    .field-row{grid-template-columns:1fr;}
+    .masthead{flex-direction:column;align-items:flex-start;}
+    thead{display:none;}
+    tbody tr{display:block;padding:10px 14px;}
+    tbody td{display:flex;justify-content:space-between;padding:5px 0;border:none;}
+    tbody td::before{content:attr(data-label);font-weight:600;color:var(--ink-soft);font-size:11px;margin-right:10px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="masthead">
+    <div>
+      <h1>Dossier — Visa &amp; Passport Registry</h1>
+      <div class="sub">Searchable case log · replaces the paper piles</div>
+    </div>
+    <div class="meta" id="statsBox">— entries on file</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="searchInput" type="text" placeholder="Search by last name, passport no., nationality, visa no., phone, email…">
+    </div>
+    <button class="btn secondary" id="exportBtn">Export CSV</button>
+    <button class="btn" id="newBtn">+ New entry</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="archive">
+    <table id="table">
+      <thead>
+        <tr>
+          <th>Last name</th>
+          <th>First name</th>
+          <th>Passport no.</th>
+          <th>Nationality</th>
+          <th>Category</th>
+          <th>Date added</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="stamp">NO RECORDS FOUND</div>
+      <div>Try a different search, or add a new entry.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Entry modal -->
+<div class="overlay" id="overlay">
+  <div class="card">
+    <div class="card-head">
+      <h2 id="modalTitle">New entry</h2>
+      <button id="closeModal">✕</button>
+    </div>
+    <div class="card-body">
+
+      <div class="section-label">Bio-data page (as printed on passport)</div>
+
+      <div class="scan-zone" id="scanZone">
+        <div class="title">📷 Scan &amp; autofill from passport</div>
+        <div class="hint">Upload a photo, scan, or PDF of the bio-data page — the MRZ (the two lines at the bottom) will be read automatically</div>
+        <input type="file" id="f_scanInput" accept="image/*,application/pdf" style="display:none;">
+        <div class="scan-status" id="scanStatus"></div>
+      </div>
+
+      <div class="passport-block">
+        <div class="field-row">
+          <div class="field" id="wrap_passport">
+            <label>N° de Passeport / Passport No.</label>
+            <input id="f_passport" type="text" placeholder="e.g. 123456789">
+          </div>
+          <div class="field" id="wrap_nationality">
+            <label>Nationalité / Nationality</label>
+            <input id="f_nationality" type="text" placeholder="e.g. Algérienne">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field" id="wrap_lastName">
+            <label>Nom / Surname</label>
+            <input id="f_lastName" type="text" placeholder="e.g. BENBERTAL">
+          </div>
+          <div class="field" id="wrap_firstName">
+            <label>Prénom(s) / Given Names</label>
+            <input id="f_firstName" type="text" placeholder="e.g. Ali Chihab Edine">
+          </div>
+        </div>
+        <div class="field-row tri">
+          <div class="field" id="wrap_dob">
+            <label>Date de Naissance / DOB</label>
+            <input id="f_dob" type="date">
+          </div>
+          <div class="field">
+            <label>Lieu de Naissance / POB</label>
+            <input id="f_pob" type="text" placeholder="e.g. Laghouat">
+          </div>
+          <div class="field" id="wrap_sex">
+            <label>Sexe / Sex</label>
+            <select id="f_sex">
+              <option value="">—</option>
+              <option value="M">M</option>
+              <option value="F">F</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Date de Délivrance / Issue Date</label>
+            <input id="f_issueDate" type="date">
+          </div>
+          <div class="field" id="wrap_expiryDate">
+            <label>Date d'Expiration / Expiry Date</label>
+            <input id="f_expiryDate" type="date">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label>Autorité de Délivrance / Issuing Authority</label>
+            <input id="f_authority" type="text" placeholder="e.g. Wilaya de Laghouat">
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Application / case details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Category</label>
+          <select id="f_category"></select>
+        </div>
+        <div class="field">
+          <label>Visa number</label>
+          <input id="f_visa" type="text" placeholder="if applicable">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Phone</label>
+          <input id="f_phone" type="text">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input id="f_email" type="text">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Date added</label>
+          <input id="f_date" type="date">
+        </div>
+        <div class="field"></div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label>Notes</label>
+          <textarea id="f_notes" placeholder="Anything else worth flagging on this case"></textarea>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label>Attach another scan (optional — e.g. visa page, or manual attach without OCR)</label>
+          <div class="attach-box" id="attachBox">
+            <div id="attachPrompt">Click to attach an image, or drop one here</div>
+            <img id="attachPreview" style="display:none;">
+          </div>
+          <input type="file" id="f_image" accept="image/*" style="display:none;">
+        </div>
+      </div>
+    </div>
+    <div class="card-foot">
+      <div class="left">
+        <button class="btn secondary" id="deleteBtn" style="display:none;color:var(--stamp-red);border-color:var(--stamp-red);">Delete</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn secondary" id="cancelBtn">Cancel</button>
+        <button class="btn" id="saveBtn">Save entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+const DEFAULT_CATEGORIES = [
+  {id:'first', label:'First Application', color:'var(--cat-first)'},
+  {id:'renewal', label:'Renewal', color:'var(--cat-renewal)'},
+  {id:'family', label:'Family Visit', color:'var(--cat-family)'},
+  {id:'affair', label:'Business / Affair', color:'var(--cat-affair)'},
+];
+
+if(window['pdfjsLib']){
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+const MRZ_COUNTRY_MAP = {
+  DZA:'Algérienne', MAR:'Marocaine', TUN:'Tunisienne', LBY:'Libyenne', EGY:'Égyptienne',
+  FRA:'Française', ESP:'Espagnole', ITA:'Italienne', DEU:'Allemande', GBR:'Britannique',
+  USA:'Américaine', CAN:'Canadienne', TUR:'Turque', SAU:'Saoudienne', ARE:'Émiratie',
+  QAT:'Qatarienne', SYR:'Syrienne', LBN:'Libanaise', JOR:'Jordanienne', MLI:'Malienne',
+  NER:'Nigérienne', SEN:'Sénégalaise', CIV:'Ivoirienne', CMR:'Camerounaise', CHN:'Chinoise',
+  IND:'Indienne', RUS:'Russe', PRT:'Portugaise', NLD:'Néerlandaise', BEL:'Belge', CHE:'Suisse',
+};
+
+let entries = [];
+let categories = [];
+let activeTab = 'all';
+let editingId = null;
+let pendingImageDataUrl = null;
+let pendingImageRemoved = false;
+
+const $ = (id) => document.getElementById(id);
+const toastEl = $('toast');
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(()=>toastEl.classList.remove('show'), 1800);
+}
+
+async function loadData(){
+  try{
+    const res = await window.storage.get('entries', false);
+    entries = res ? JSON.parse(res.value) : [];
+  }catch(e){ entries = []; }
+  try{
+    const res = await window.storage.get('categories', false);
+    categories = res ? JSON.parse(res.value) : [...DEFAULT_CATEGORIES];
+  }catch(e){ categories = [...DEFAULT_CATEGORIES]; }
+  renderTabs();
+  renderTable();
+  renderStats();
+}
+
+async function saveEntries(){
+  try{
+    await window.storage.set('entries', JSON.stringify(entries), false);
+  }catch(e){ toast('Could not save — storage error'); }
+}
+async function saveCategories(){
+  try{
+    await window.storage.set('categories', JSON.stringify(categories), false);
+  }catch(e){ toast('Could not save categories'); }
+}
+
+function catInfo(id){
+  return categories.find(c=>c.id===id) || {id, label:id, color:'var(--cat-other)'};
+}
+
+function renderStats(){
+  $('statsBox').textContent = `${entries.length} entr${entries.length===1?'y':'ies'} on file`;
+}
+
+function renderTabs(){
+  const tabsEl = $('tabs');
+  tabsEl.innerHTML = '';
+  const allTab = document.createElement('div');
+  allTab.className = 'tab' + (activeTab==='all' ? ' active' : '');
+  allTab.dataset.cat = 'all';
+  allTab.innerHTML = `All <span class="count">${entries.length}</span>`;
+  allTab.onclick = ()=>{ activeTab='all'; renderTabs(); renderTable(); };
+  tabsEl.appendChild(allTab);
+
+  categories.forEach(cat=>{
+    const count = entries.filter(e=>e.category===cat.id).length;
+    const t = document.createElement('div');
+    t.className = 'tab' + (activeTab===cat.id ? ' active' : '');
+    t.dataset.cat = cat.id;
+    t.style.borderTopColor = activeTab===cat.id ? cat.color : '';
+    t.innerHTML = `${cat.label} <span class="count">${count}</span>`;
+    t.onclick = ()=>{ activeTab=cat.id; renderTabs(); renderTable(); };
+    tabsEl.appendChild(t);
+  });
+
+  const addTab = document.createElement('div');
+  addTab.className = 'tab add-tab';
+  addTab.textContent = '+ Add category';
+  addTab.onclick = addCategory;
+  tabsEl.appendChild(addTab);
+}
+
+async function addCategory(){
+  const label = prompt('New category name (e.g. "Student Visa")');
+  if(!label) return;
+  const id = 'cat_' + Date.now();
+  const palette = ['#7A5C3E','#3E6B7A','#7A3E5C','#5C7A3E','#3E4A7A'];
+  const color = palette[categories.length % palette.length];
+  categories.push({id, label, color});
+  await saveCategories();
+  renderTabs();
+}
+
+function matchesSearch(e, q){
+  if(!q) return true;
+  q = q.toLowerCase();
+  return [e.lastName, e.firstName, e.passportNumber, e.visaNumber, e.phone, e.email, e.notes, e.nationality, e.placeOfBirth, e.authority]
+    .some(v => (v||'').toLowerCase().includes(q));
+}
+
+function renderTable(){
+  const q = $('searchInput').value.trim();
+  let list = entries.filter(e => (activeTab==='all' || e.category===activeTab) && matchesSearch(e,q));
+  list = list.slice().sort((a,b)=> (b.dateAdded||'').localeCompare(a.dateAdded||''));
+
+  const tbody = $('tbody');
+  tbody.innerHTML = '';
+  $('emptyState').style.display = list.length ? 'none' : 'block';
+  $('table').style.display = list.length ? 'table' : 'none';
+
+  list.forEach(e=>{
+    const cat = catInfo(e.category);
+    const tr = document.createElement('tr');
+    tr.onclick = ()=> openModal(e.id);
+    tr.innerHTML = `
+      <td class="name-cell" data-label="Last name">${escapeHtml(e.lastName||'—')}</td>
+      <td data-label="First name">${escapeHtml(e.firstName||'—')}</td>
+      <td class="mono" data-label="Passport no.">${escapeHtml(e.passportNumber||'—')}</td>
+      <td data-label="Nationality">${escapeHtml(e.nationality||'—')}</td>
+      <td data-label="Category"><span class="badge" style="background:${cat.color}">${escapeHtml(cat.label)}</span></td>
+      <td class="mono" data-label="Date added">${escapeHtml(e.dateAdded||'—')}</td>
+      <td data-label="">
+        <div class="row-actions">
+          <button class="edit" data-id="${e.id}">Edit</button>
+          <button class="del" data-id="${e.id}">Delete</button>
+        </div>
+      </td>
+    `;
+    tr.querySelector('.edit').onclick = (ev)=>{ ev.stopPropagation(); openModal(e.id); };
+    tr.querySelector('.del').onclick = async (ev)=>{
+      ev.stopPropagation();
+      if(!confirm(`Delete the entry for ${e.lastName||'this person'}?`)) return;
+      entries = entries.filter(x=>x.id!==e.id);
+      try{ await window.storage.delete('image:'+e.id, false); }catch(err){}
+      await saveEntries();
+      renderTabs();
+      renderTable();
+      toast('Entry deleted');
+    };
+    tbody.appendChild(tr);
+  });
+  renderStats();
+}
+
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function populateCategorySelect(){
+  const sel = $('f_category');
+  sel.innerHTML = categories.map(c=>`<option value="${c.id}">${escapeHtml(c.label)}</option>`).join('');
+}
+
+// ---------- MRZ (machine-readable zone) parsing ----------
+
+function mrzCharValue(c){
+  if(c === '<') return 0;
+  if(c >= '0' && c <= '9') return c.charCodeAt(0) - 48;
+  if(c >= 'A' && c <= 'Z') return c.charCodeAt(0) - 55;
+  return 0;
+}
+function mrzCheckDigit(str){
+  const weights = [7,3,1];
+  let sum = 0;
+  for(let i=0;i<str.length;i++) sum += mrzCharValue(str[i]) * weights[i%3];
+  return sum % 10;
+}
+function mrzDateToISO(yymmdd, preferFuture){
+  if(!/^\d{6}$/.test(yymmdd)) return '';
+  const yy = parseInt(yymmdd.slice(0,2),10);
+  const mm = yymmdd.slice(2,4), dd = yymmdd.slice(4,6);
+  const currentYY = new Date().getFullYear() % 100;
+  const century = preferFuture ? 2000 : (yy > currentYY ? 1900 : 2000);
+  const y = century + yy;
+  if(mm==='00' || dd==='00' || parseInt(mm,10)>12 || parseInt(dd,10)>31) return '';
+  return `${y}-${mm}-${dd}`;
+}
+
+// Find two 44-char-ish MRZ candidate lines inside raw OCR text
+function extractMrzLines(rawText){
+  const lines = rawText.toUpperCase().split('\n')
+    .map(l => l.replace(/[^A-Z0-9<]/g,''))
+    .filter(l => l.length >= 30 && (l.match(/</g)||[]).length >= 3);
+  if(lines.length < 2) return null;
+  // Prefer the two longest candidate lines, in original order
+  const sorted = lines.slice().sort((a,b)=>b.length-a.length).slice(0,2);
+  const ordered = lines.filter(l => sorted.includes(l)).slice(0,2);
+  const pad = l => (l.length >= 44 ? l.slice(0,44) : l.padEnd(44,'<'));
+  return ordered.length === 2 ? [pad(ordered[0]), pad(ordered[1])] : null;
+}
+
+function parseTD3(line1, line2){
+  const result = {valid:{}};
+  // Line 1: type(2) + country(3) + names(39)
+  const country = line1.slice(2,5).replace(/</g,'');
+  const nameField = line1.slice(5,44);
+  // Surname/given-names boundary is 2+ consecutive '<' (OCR sometimes reads 3+ or drops one).
+  // A single '<' inside either part just separates multiple names (e.g. compound surnames, multiple given names).
+  const nameParts = nameField.split(/<{2,}/);
+  const surnamePart = nameParts[0] || '';
+  const givenPart = nameParts[1] || '';
+  result.lastName = surnamePart.replace(/</g,' ').replace(/\s+/g,' ').trim();
+  result.firstName = givenPart.replace(/</g,' ').replace(/\s+/g,' ').trim();
+  result.nationality = MRZ_COUNTRY_MAP[country] || country;
+  result.countryCode = country;
+
+  // Line 2
+  const passportNumRaw = line2.slice(0,9);
+  const passportCheck = line2[9];
+  const dobRaw = line2.slice(13,19);
+  const dobCheck = line2[19];
+  const sex = line2[20];
+  const expRaw = line2.slice(21,27);
+  const expCheck = line2[27];
+
+  result.passportNumber = passportNumRaw.replace(/</g,'').trim();
+  result.sex = (sex==='M'||sex==='F') ? sex : '';
+  result.dob = mrzDateToISO(dobRaw, false);
+  result.expiryDate = mrzDateToISO(expRaw, true);
+
+  result.valid.passport = /^\d$/.test(passportCheck) && mrzCheckDigit(passportNumRaw) === parseInt(passportCheck,10);
+  result.valid.dob = /^\d{6}$/.test(dobRaw) && /^\d$/.test(dobCheck) && mrzCheckDigit(dobRaw) === parseInt(dobCheck,10);
+  result.valid.expiry = /^\d{6}$/.test(expRaw) && /^\d$/.test(expCheck) && mrzCheckDigit(expRaw) === parseInt(expCheck,10);
+  return result;
+}
+
+function setScanStatus(msg, cls){
+  const el = $('scanStatus');
+  el.textContent = msg;
+  el.className = 'scan-status' + (cls ? ' '+cls : '');
+}
+function markFieldVerified(wrapId, ok){
+  const el = $(wrapId);
+  if(!el) return;
+  el.classList.remove('verified','unverified');
+  el.classList.add(ok ? 'verified' : 'unverified');
+}
+
+async function fileToImageCanvas(file, maxW){
+  if(file.type === 'application/pdf'){
+    if(!window['pdfjsLib']) throw new Error('PDF reader unavailable');
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({scale:2.5});
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+    return canvas;
+  }
+  const dataUrl = await new Promise((res,rej)=>{
+    const r = new FileReader();
+    r.onload = ()=>res(r.result); r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+  const img = await new Promise((res,rej)=>{
+    const im = new Image(); im.onload=()=>res(im); im.onerror=rej; im.src = dataUrl;
+  });
+  const canvas = document.createElement('canvas');
+  const scale = maxW ? Math.min(1, maxW/img.width) : 1;
+  canvas.width = img.width*scale; canvas.height = img.height*scale;
+  canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+  return canvas;
+}
+
+function cropBottom(canvas, fraction){
+  const h = Math.round(canvas.height * fraction);
+  const crop = document.createElement('canvas');
+  crop.width = canvas.width; crop.height = h;
+  crop.getContext('2d').drawImage(canvas, 0, canvas.height-h, canvas.width, h, 0, 0, canvas.width, h);
+  return crop;
+}
+
+function cropStrip(canvas, topFrac, bottomFrac){
+  const y0 = Math.round(canvas.height * topFrac);
+  const y1 = Math.round(canvas.height * bottomFrac);
+  const h = Math.max(1, y1 - y0);
+  const crop = document.createElement('canvas');
+  crop.width = canvas.width; crop.height = h;
+  crop.getContext('2d').drawImage(canvas, 0, y0, canvas.width, h, 0, 0, canvas.width, h);
+  return crop;
+}
+
+async function ocrText(canvas, singleLine){
+  const { data } = await Tesseract.recognize(canvas, 'eng', {
+    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
+    tessedit_pageseg_mode: singleLine ? '7' : '6',
+    logger: (m)=>{
+      if(m.status === 'recognizing text'){
+        setScanStatus(`Reading MRZ… ${Math.round((m.progress||0)*100)}%`, 'busy');
+      }
+    }
+  });
+  return data.text;
+}
+
+async function handleScanFile(file){
+  if(!window['Tesseract']){
+    setScanStatus('OCR engine failed to load — check your connection, or fill fields manually.', 'warn');
+    return;
+  }
+  try{
+    setScanStatus('Preparing image…', 'busy');
+    const fullCanvas = await fileToImageCanvas(file, 1600);
+
+    // Auto-attach the scan itself, same as the manual attach flow
+    pendingImageDataUrl = fullCanvas.toDataURL('image/jpeg', 0.6);
+    pendingImageRemoved = false;
+    $('attachPreview').src = pendingImageDataUrl;
+    $('attachPreview').style.display = 'block';
+    $('attachPrompt').style.display = 'none';
+
+    setScanStatus('Reading MRZ…', 'busy');
+    const mrzCrop = cropBottom(fullCanvas, 0.30);
+
+    // Primary approach: OCR each MRZ line separately as its own single line — far more
+    // reliable for reading the '<' fill characters than one pass over both lines.
+    let lines = null;
+    try{
+      const line1Text = await ocrText(cropStrip(mrzCrop, 0.10, 0.52), true);
+      const line2Text = await ocrText(cropStrip(mrzCrop, 0.52, 0.95), true);
+      const clean = t => t.toUpperCase().replace(/[^A-Z0-9<]/g,'');
+      const l1 = clean(line1Text), l2 = clean(line2Text);
+      if(l1.length >= 30 && l2.length >= 30){
+        const pad = l => (l.length >= 44 ? l.slice(0,44) : l.padEnd(44,'<'));
+        lines = [pad(l1), pad(l2)];
+      }
+    }catch(e){ /* fall through to whole-block attempt */ }
+
+    // Fallback: OCR the whole two-line block at once and try to split it into lines.
+    if(!lines){
+      const text = await ocrText(mrzCrop, false);
+      lines = extractMrzLines(text);
+    }
+    if(!lines){
+      const text = await ocrText(fullCanvas, false);
+      lines = extractMrzLines(text);
+    }
+    if(!lines){
+      setScanStatus('Could not locate the MRZ lines clearly — the scan was attached, but please fill fields in manually.', 'warn');
+      return;
+    }
+
+    const parsed = parseTD3(lines[0], lines[1]);
+    if(parsed.passportNumber) $('f_passport').value = parsed.passportNumber;
+    if(parsed.nationality) $('f_nationality').value = parsed.nationality;
+    if(parsed.lastName) $('f_lastName').value = parsed.lastName;
+    if(parsed.firstName) $('f_firstName').value = parsed.firstName;
+    if(parsed.dob) $('f_dob').value = parsed.dob;
+    if(parsed.sex) $('f_sex').value = parsed.sex;
+    if(parsed.expiryDate) $('f_expiryDate').value = parsed.expiryDate;
+
+    markFieldVerified('wrap_passport', parsed.valid.passport);
+    markFieldVerified('wrap_dob', parsed.valid.dob);
+    markFieldVerified('wrap_expiryDate', parsed.valid.expiry);
+
+    const allOk = parsed.valid.passport && parsed.valid.dob && parsed.valid.expiry;
+    if(allOk){
+      setScanStatus('MRZ read and verified — bio-data fields filled in below.', 'ok');
+    } else {
+      setScanStatus('MRZ read, but some checksums didn\'t match (highlighted in red) — please double-check those fields.', 'warn');
+    }
+    toast('Passport scan processed');
+  }catch(err){
+    setScanStatus('Something went wrong reading that file — the scan may still be attached below. Please fill fields in manually.', 'warn');
+  }
+}
+
+$('scanZone').addEventListener('click', ()=> $('f_scanInput').click());
+$('f_scanInput').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(file) handleScanFile(file);
+});
+$('scanZone').addEventListener('dragover', (e)=>{ e.preventDefault(); });
+$('scanZone').addEventListener('drop', (e)=>{
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if(file) handleScanFile(file);
+});
+
+function openModal(id){
+  editingId = id || null;
+  pendingImageDataUrl = null;
+  pendingImageRemoved = false;
+  populateCategorySelect();
+  $('deleteBtn').style.display = id ? 'inline-block' : 'none';
+  $('attachPrompt').style.display = 'block';
+  $('attachPreview').style.display = 'none';
+  $('f_image').value = '';
+  setScanStatus('', '');
+  $('f_scanInput').value = '';
+  ['wrap_passport','wrap_nationality','wrap_lastName','wrap_firstName','wrap_dob','wrap_sex','wrap_expiryDate'].forEach(w=>{
+    const el = $(w); if(el) el.classList.remove('verified','unverified');
+  });
+
+  if(id){
+    const e = entries.find(x=>x.id===id);
+    $('modalTitle').textContent = 'Edit entry';
+    $('f_category').value = e.category;
+    $('f_date').value = e.dateAdded || '';
+    $('f_lastName').value = e.lastName || '';
+    $('f_firstName').value = e.firstName || '';
+    $('f_passport').value = e.passportNumber || '';
+    $('f_nationality').value = e.nationality || '';
+    $('f_dob').value = e.dob || '';
+    $('f_pob').value = e.placeOfBirth || '';
+    $('f_sex').value = e.sex || '';
+    $('f_issueDate').value = e.issueDate || '';
+    $('f_expiryDate').value = e.expiryDate || '';
+    $('f_authority').value = e.authority || '';
+    $('f_visa').value = e.visaNumber || '';
+    $('f_phone').value = e.phone || '';
+    $('f_email').value = e.email || '';
+    $('f_notes').value = e.notes || '';
+    if(e.hasImage){
+      window.storage.get('image:'+id, false).then(res=>{
+        if(res){
+          $('attachPreview').src = res.value;
+          $('attachPreview').style.display = 'block';
+          $('attachPrompt').style.display = 'none';
+        }
+      }).catch(()=>{});
+    }
+  } else {
+    $('modalTitle').textContent = 'New entry';
+    $('f_category').value = activeTab !== 'all' ? activeTab : categories[0].id;
+    $('f_date').value = new Date().toISOString().slice(0,10);
+    ['f_lastName','f_firstName','f_passport','f_nationality','f_dob','f_pob','f_sex','f_issueDate','f_expiryDate','f_authority','f_visa','f_phone','f_email','f_notes'].forEach(id=>$(id).value='');
+  }
+  $('overlay').classList.add('open');
+}
+
+function closeModal(){
+  $('overlay').classList.remove('open');
+  editingId = null;
+}
+
+$('newBtn').onclick = ()=> openModal(null);
+$('closeModal').onclick = closeModal;
+$('cancelBtn').onclick = closeModal;
+$('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+
+$('attachBox').onclick = ()=> $('f_image').click();
+$('f_image').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 1000;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingImageDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      pendingImageRemoved = false;
+      $('attachPreview').src = pendingImageDataUrl;
+      $('attachPreview').style.display = 'block';
+      $('attachPrompt').style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+$('saveBtn').onclick = async ()=>{
+  const data = {
+    category: $('f_category').value,
+    dateAdded: $('f_date').value,
+    lastName: $('f_lastName').value.trim(),
+    firstName: $('f_firstName').value.trim(),
+    passportNumber: $('f_passport').value.trim(),
+    nationality: $('f_nationality').value.trim(),
+    dob: $('f_dob').value,
+    placeOfBirth: $('f_pob').value.trim(),
+    sex: $('f_sex').value,
+    issueDate: $('f_issueDate').value,
+    expiryDate: $('f_expiryDate').value,
+    authority: $('f_authority').value.trim(),
+    visaNumber: $('f_visa').value.trim(),
+    phone: $('f_phone').value.trim(),
+    email: $('f_email').value.trim(),
+    notes: $('f_notes').value.trim(),
+  };
+  if(!data.lastName && !data.passportNumber){
+    toast('Add at least a last name or passport number');
+    return;
+  }
+
+  if(editingId){
+    const idx = entries.findIndex(x=>x.id===editingId);
+    const hasImage = pendingImageRemoved ? false : (pendingImageDataUrl ? true : entries[idx].hasImage);
+    entries[idx] = {...entries[idx], ...data, hasImage};
+    if(pendingImageDataUrl){
+      try{ await window.storage.set('image:'+editingId, pendingImageDataUrl, false); }catch(e){}
+    } else if(pendingImageRemoved){
+      try{ await window.storage.delete('image:'+editingId, false); }catch(e){}
+    }
+  } else {
+    const id = 'e_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+    entries.push({id, ...data, hasImage: !!pendingImageDataUrl});
+    if(pendingImageDataUrl){
+      try{ await window.storage.set('image:'+id, pendingImageDataUrl, false); }catch(e){}
+    }
+  }
+  await saveEntries();
+  renderTabs();
+  renderTable();
+  closeModal();
+  toast('Entry saved');
+};
+
+$('deleteBtn').onclick = async ()=>{
+  if(!editingId) return;
+  if(!confirm('Delete this entry permanently?')) return;
+  entries = entries.filter(x=>x.id!==editingId);
+  try{ await window.storage.delete('image:'+editingId, false); }catch(e){}
+  await saveEntries();
+  renderTabs();
+  renderTable();
+  closeModal();
+  toast('Entry deleted');
+};
+
+$('searchInput').addEventListener('input', renderTable);
+
+$('exportBtn').onclick = ()=>{
+  const rows = [['Category','Last Name','First Name','Passport Number','Nationality','Date of Birth','Place of Birth','Sex','Issue Date','Expiry Date','Authority','Visa Number','Phone','Email','Date Added','Notes']];
+  entries.forEach(e=>{
+    rows.push([catInfo(e.category).label, e.lastName, e.firstName, e.passportNumber, e.nationality, e.dob, e.placeOfBirth, e.sex, e.issueDate, e.expiryDate, e.authority, e.visaNumber, e.phone, e.email, e.dateAdded, (e.notes||'').replace(/\n/g,' ')]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'visa_registry_export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV exported');
+};
+
+loadData();
+</script>
+</body>
+</html>
