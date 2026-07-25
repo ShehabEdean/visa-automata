@@ -490,14 +490,175 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
-
+<script>
 // ---- Supabase config ----
 const SUPABASE_URL = 'https://czxwafbtlhmzwcikyxny.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eHdhZmJ0bGhtendjaWt5eG55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTk2NTUsImV4cCI6MjEwMDU3NTY1NX0.0dAXpf-Ap-RVPoDYefFM-Bzkbbyf5rR945FeQyLGycE';
 
-const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
+let _accessToken = null;
+let _refreshToken = null;
+
+function _headers(extra){
+  const h = {'Content-Type':'application/json','apikey':SUPABASE_ANON,...(extra||{})};
+  if(_accessToken) h['Authorization'] = 'Bearer ' + _accessToken;
+  return h;
+}
+
+const _supabase = {
+  auth: {
+    async getSession(){
+      if(_accessToken) return { data: { session: { access_token: _accessToken } }, error: null };
+      // Try to restore from localStorage
+      const stored = localStorage.getItem('supabase_session');
+      if(stored){
+        try {
+          const s = JSON.parse(stored);
+          _accessToken = s.access_token;
+          _refreshToken = s.refresh_token;
+          // Try refresh
+          const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+            method:'POST', headers:_headers(),
+            body: JSON.stringify({ refresh_token: _refreshToken })
+          });
+          if(res.ok){
+            const d = await res.json();
+            _accessToken = d.access_token;
+            _refreshToken = d.refresh_token;
+            localStorage.setItem('supabase_session', JSON.stringify(d));
+            return { data: { session: { access_token: _accessToken } }, error: null };
+          }
+        } catch(e){}
+        _accessToken = null; _refreshToken = null;
+        localStorage.removeItem('supabase_session');
+      }
+      return { data: { session: null }, error: null };
+    },
+    async signInWithPassword({email, password}){
+      const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+        method:'POST', headers:_headers(),
+        body: JSON.stringify({ email, password })
+      });
+      if(!res.ok){
+        const e = await res.json();
+        return { data: {}, error: { message: e.error_description || e.msg || 'Login failed' } };
+      }
+      const d = await res.json();
+      _accessToken = d.access_token;
+      _refreshToken = d.refresh_token;
+      localStorage.setItem('supabase_session', JSON.stringify(d));
+      return { data: {}, error: null };
+    },
+    async signOut(){
+      _accessToken = null; _refreshToken = null;
+      localStorage.removeItem('supabase_session');
+    }
+  },
+  from(table){
+    const self = this;
+    const _filters = [];
+    const _order = { col: null, asc: true };
+    const _single = { one: false, col: null };
+    const api = {
+      select(cols){
+        self._select = cols;
+        return api;
+      },
+      insert(row){
+        self._insert = row;
+        return api;
+      },
+      update(row){
+        self._update = row;
+        return api;
+      },
+      delete(){
+        self._delete = true;
+        return api;
+      },
+      eq(col, val){ _filters.push({col, op:'eq', val}); return api; },
+      order(col, opts){ _order.col = col; _order.asc = (opts&&opts.ascending!==false); return api; },
+      single(){ _single.one = true; return api; },
+      async then(resolve){
+        try {
+          let url = SUPABASE_URL + '/rest/v1/' + table;
+          const params = new URLSearchParams();
+          const opts = {};
+          const isSelect = !self._insert && !self._update && !self._delete;
+
+          if(isSelect){
+            params.set('select', self._select || '*');
+            _filters.forEach(f => {
+              if(f.op==='eq') params.set(f.col, 'eq.' + f.val);
+            });
+            if(_order.col) params.set('order', _order.col + (_order.asc ? '.asc' : '.desc'));
+            opts.method = 'GET';
+            opts.headers = _headers({ 'Prefer': 'return=representation' });
+          } else if(self._insert){
+            opts.method = 'POST';
+            opts.headers = _headers({ 'Prefer': 'return=representation' });
+            opts.body = JSON.stringify(self._insert);
+          } else if(self._update){
+            _filters.forEach(f => {
+              if(f.op==='eq') params.set(f.col, 'eq.' + f.val);
+            });
+            opts.method = 'PATCH';
+            opts.headers = _headers({ 'Prefer': 'return=representation' });
+            opts.body = JSON.stringify(self._update);
+          } else if(self._delete){
+            _filters.forEach(f => {
+              if(f.op==='eq') params.set(f.col, 'eq.' + f.val);
+            });
+            opts.method = 'DELETE';
+            opts.headers = _headers({ 'Prefer': 'return=representation' });
+          }
+
+          if(params.toString()) url += '?' + params.toString();
+          const res = await fetch(url, opts);
+          if(!res.ok){
+            const e = await res.json();
+            resolve({ data: null, error: { message: e.message || e.hint || 'Request failed' } });
+            return;
+          }
+          const data = await res.json();
+          resolve({ data: _single.one ? data[0] : data, error: null });
+        } catch(err){
+          resolve({ data: null, error: { message: err.message } });
+        }
+        // Reset state
+        self._select = null; self._insert = null; self._update = null; self._delete = null;
+        _filters.length = 0; _order.col = null; _single.one = false;
+      }
+    };
+    // Reset state for fresh chain
+    self._select = null; self._insert = null; self._update = null; self._delete = null;
+    _filters.length = 0; _order.col = null; _single.one = false;
+    return api;
+  },
+  storage: {
+    from(bucket){
+      return {
+        getPublicUrl(path){
+          return { data: { publicUrl: SUPABASE_URL + '/storage/v1/object/public/' + bucket + '/' + path } };
+        },
+        async upload(path, file, opts){
+          const url = SUPABASE_URL + '/storage/v1/object/' + bucket + '/' + path;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: _headers({ 'Content-Type': file.type || 'image/jpeg', 'x-upsert': (opts&&opts.upsert)?'true':'false' }),
+            body: file
+          });
+          if(!res.ok) return { error: { message: 'Upload failed' } };
+          return { error: null };
+        },
+        async remove(paths){
+          const url = SUPABASE_URL + '/storage/v1/object/' + bucket + '/' + paths[0];
+          await fetch(url, { method:'DELETE', headers:_headers() });
+          return { error: null };
+        }
+      };
+    }
+  }
+};
 
 // ---- Constants ----
 const CATEGORIES = [
