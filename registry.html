@@ -490,12 +490,17 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 // ---- Supabase config ----
 const SUPABASE_URL = 'https://czxwafbtlhmzwcikyxny.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eHdhZmJ0bGhtendjaWt5eG55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTk2NTUsImV4cCI6MjEwMDU3NTY1NX0.0dAXpf-Ap-RVPoDYefFM-Bzkbbyf5rR945FeQyLGycE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+if(!window.supabase || !window.supabase.createClient){
+  document.getElementById('loadingScreen').innerHTML = '<div style="color:#A63D2F;text-align:center;padding:40px;">Failed to load Supabase library.<br>Please check your internet connection and refresh.</div>';
+  throw new Error('Supabase SDK not loaded');
+}
+const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ---- Constants ----
 const CATEGORIES = [
@@ -535,10 +540,15 @@ function toast(msg){
 
 // ---- Auth ----
 async function checkSession(){
-  const { data: { session } } = await supabase.auth.getSession();
-  if(session){
-    showApp();
-  } else {
+  try {
+    const { data: { session } } = await _supabase.auth.getSession();
+    if(session){
+      showApp();
+    } else {
+      showLogin();
+    }
+  } catch(err) {
+    console.error('checkSession error:', err);
     showLogin();
   }
 }
@@ -562,7 +572,7 @@ $('loginBtn').onclick = async ()=>{
   if(!email || !pass){ $('loginError').textContent = 'Enter email and password'; return; }
   $('loginError').textContent = '';
   $('loginBtn').textContent = 'Signing in…';
-  const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  const { error } = await _supabase.auth.signInWithPassword({ email, password: pass });
   $('loginBtn').textContent = 'Sign in';
   if(error){
     $('loginError').textContent = error.message;
@@ -574,23 +584,29 @@ $('loginPass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') $('loginBt
 $('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') $('loginPass').focus(); });
 
 $('logoutBtn').onclick = async ()=>{
-  await supabase.auth.signOut();
+  await _supabase.auth.signOut();
   entries = [];
   showLogin();
 };
 
 // ---- Data ----
 async function loadEntries(){
-  const { data, error } = await supabase
-    .from('applications')
-    .select('*')
-    .order('date_added', { ascending: false });
-  if(error){
-    console.error(error);
-    toast('Error loading data — check your connection');
+  try {
+    const { data, error } = await _supabase
+      .from('applications')
+      .select('*')
+      .order('date_added', { ascending: false });
+    if(error){
+      console.error('loadEntries error:', error);
+      toast('Error loading data: ' + error.message);
+      entries = [];
+    } else {
+      entries = data || [];
+    }
+  } catch(err) {
+    console.error('loadEntries catch:', err);
+    toast('Connection error');
     entries = [];
-  } else {
-    entries = data || [];
   }
   renderTabs();
   renderTable();
@@ -665,11 +681,11 @@ function renderTable(){
     tr.querySelector('.del').onclick = async (ev)=>{
       ev.stopPropagation();
       if(!confirm(`Delete the entry for ${e.last_name||'this person'}?`)) return;
-      const { error } = await supabase.from('applications').delete().eq('id', e.id);
+      const { error } = await _supabase.from('applications').delete().eq('id', e.id);
       if(error){ toast('Delete failed'); return; }
       // Also delete image if exists
       if(e.has_image){
-        await supabase.storage.from('scans').remove([`scans/${e.id}.jpg`]);
+        await _supabase.storage.from('scans').remove([`scans/${e.id}.jpg`]);
       }
       entries = entries.filter(x=>x.id!==e.id);
       renderTabs();
@@ -725,7 +741,7 @@ function openModal(id){
     $('f_isPrimary').checked = !!e.is_primary;
     // Load existing image
     if(e.has_image){
-      const { data } = supabase.storage.from('scans').getPublicUrl(`scans/${e.id}.jpg`);
+      const { data } = _supabase.storage.from('scans').getPublicUrl(`scans/${e.id}.jpg`);
       if(data && data.publicUrl){
         $('attachPreview').src = data.publicUrl;
         $('attachPreview').style.display = 'block';
@@ -814,28 +830,28 @@ $('saveBtn').onclick = async ()=>{
 
   try {
     if(editingId){
-      const { error } = await supabase.from('applications').update(data).eq('id', editingId);
+      const { error } = await _supabase.from('applications').update(data).eq('id', editingId);
       if(error) throw error;
 
       // Handle image upload/remove
       if(pendingImageRemoved){
-        await supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
-        await supabase.from('applications').update({ has_image: false }).eq('id', editingId);
+        await _supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
+        await _supabase.from('applications').update({ has_image: false }).eq('id', editingId);
       } else if(pendingUploadFile){
-        await supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
-        await supabase.from('applications').update({ has_image: true }).eq('id', editingId);
+        await _supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
+        await _supabase.from('applications').update({ has_image: true }).eq('id', editingId);
       }
     } else {
       // Insert to get an ID
-      const { data: inserted, error } = await supabase.from('applications').insert(data).select().single();
+      const { data: inserted, error } = await _supabase.from('applications').insert(data).select().single();
       if(error) throw error;
       editingId = inserted.id;
       entries.unshift(inserted);
 
       // Upload image if any
       if(pendingUploadFile){
-        await supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
-        await supabase.from('applications').update({ has_image: true }).eq('id', editingId);
+        await _supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
+        await _supabase.from('applications').update({ has_image: true }).eq('id', editingId);
       }
     }
 
@@ -855,11 +871,11 @@ $('saveBtn').onclick = async ()=>{
 $('deleteBtn').onclick = async ()=>{
   if(!editingId) return;
   if(!confirm('Delete this entry permanently?')) return;
-  const { error } = await supabase.from('applications').delete().eq('id', editingId);
+  const { error } = await _supabase.from('applications').delete().eq('id', editingId);
   if(error){ toast('Delete failed'); return; }
   const entry = entries.find(x=>x.id===editingId);
   if(entry && entry.has_image){
-    await supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
+    await _supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
   }
   entries = entries.filter(x=>x.id!==editingId);
   renderTabs();
