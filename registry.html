@@ -490,17 +490,14 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
 // ---- Supabase config ----
 const SUPABASE_URL = 'https://czxwafbtlhmzwcikyxny.supabase.co';
 const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eHdhZmJ0bGhtendjaWt5eG55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTk2NTUsImV4cCI6MjEwMDU3NTY1NX0.0dAXpf-Ap-RVPoDYefFM-Bzkbbyf5rR945FeQyLGycE';
 
-if(!window.supabase || !window.supabase.createClient){
-  document.getElementById('loadingScreen').innerHTML = '<div style="color:#A63D2F;text-align:center;padding:40px;">Failed to load Supabase library.<br>Please check your internet connection and refresh.</div>';
-  throw new Error('Supabase SDK not loaded');
-}
-const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ---- Constants ----
 const CATEGORIES = [
@@ -511,7 +508,7 @@ const CATEGORIES = [
 ];
 
 if(window['pdfjsLib']){
-  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 }
 
 const MRZ_COUNTRY_MAP = {
@@ -986,7 +983,7 @@ async function fileToImageCanvas(file, maxW){
   if(file.type === 'application/pdf'){
     if(!window['pdfjsLib']) throw new Error('PDF reader unavailable');
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+    const pdf = await window.pdfjsLib.getDocument({data:buf}).promise;
     const page = await pdf.getPage(1);
     const viewport = page.getViewport({scale:2.5});
     const canvas = document.createElement('canvas');
@@ -1028,7 +1025,7 @@ function cropStrip(canvas, topFrac, bottomFrac){
 }
 
 async function ocrText(canvas, singleLine){
-  const { data } = await Tesseract.recognize(canvas, 'eng', {
+  const { data } = await window.Tesseract.recognize(canvas, 'eng', {
     tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789<',
     tessedit_pageseg_mode: singleLine ? '7' : '6',
     logger: (m)=>{
