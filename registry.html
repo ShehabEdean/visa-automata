@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dossier — Visa &amp; Passport Registry</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -29,6 +30,30 @@
     font-family:'Inter',sans-serif;
     min-height:100vh;
   }
+
+  /* ---- Login screen ---- */
+  .login-screen{
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;padding:24px;
+  }
+  .login-card{
+    background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;
+    padding:40px 36px;max-width:380px;width:100%;box-shadow:var(--shadow);text-align:center;
+  }
+  .login-card h1{
+    font-family:'Spectral',serif;font-size:24px;margin:0 0 4px;
+  }
+  .login-card .sub{font-size:13px;color:var(--ink-soft);margin-bottom:28px;}
+  .login-card .field{margin-bottom:14px;text-align:left;}
+  .login-card label{display:block;font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:4px;}
+  .login-card input{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:6px;
+    font-size:14px;font-family:'Inter',sans-serif;background:#fff;color:var(--ink);
+  }
+  .login-card input:focus{outline:2px solid var(--ink);outline-offset:0;}
+  .login-card .btn{width:100%;margin-top:8px;}
+  .login-card .error{color:var(--stamp-red);font-size:12.5px;margin-top:10px;min-height:18px;}
+
   .app{max-width:1180px;margin:0 auto;padding:28px 24px 60px;}
 
   /* Header */
@@ -45,8 +70,14 @@
   .masthead .sub{font-size:12.5px;color:var(--ink-soft);margin-top:4px;letter-spacing:0.02em;}
   .masthead .meta{
     font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--ink-soft);
-    text-align:right;line-height:1.6;
+    text-align:right;line-height:1.6;display:flex;align-items:center;gap:14px;
   }
+  .masthead .meta .logout{
+    font-family:'Inter',sans-serif;font-size:12px;font-weight:600;
+    background:transparent;border:1px solid var(--line);border-radius:5px;
+    padding:5px 10px;cursor:pointer;color:var(--ink-soft);
+  }
+  .masthead .meta .logout:hover{border-color:var(--stamp-red);color:var(--stamp-red);}
 
   /* Toolbar */
   .toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
@@ -107,6 +138,13 @@
   .badge{
     display:inline-block;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:4px;
     color:#fff;letter-spacing:0.02em;
+  }
+  .paid-badge{background:var(--stamp-green);}
+  .unpaid-badge{background:var(--stamp-red);}
+  .group-badge{
+    font-family:'IBM Plex Mono',monospace;font-size:10px;
+    background:rgba(0,0,0,0.06);padding:2px 7px;border-radius:4px;margin-left:6px;
+    color:var(--ink-soft);vertical-align:middle;
   }
   .row-actions{display:flex;gap:6px;justify-content:flex-end;}
   .row-actions button{
@@ -200,6 +238,16 @@
   }
   .toast.show{opacity:1;}
 
+  .loading-screen{
+    display:flex;align-items:center;justify-content:center;min-height:100vh;
+    font-family:'IBM Plex Mono',monospace;color:var(--ink-soft);font-size:14px;
+  }
+
+  /* Paid checkbox styling */
+  .check-row{display:flex;align-items:center;gap:8px;margin-top:4px;}
+  .check-row input[type="checkbox"]{width:18px;height:18px;accent-color:var(--stamp-green);}
+  .check-row label{font-size:13px;font-weight:500;color:var(--ink);text-transform:none;letter-spacing:0;}
+
   @media(max-width:640px){
     .field-row{grid-template-columns:1fr;}
     .masthead{flex-direction:column;align-items:flex-start;}
@@ -211,14 +259,40 @@
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- Loading screen -->
+<div class="loading-screen" id="loadingScreen">Loading…</div>
+
+<!-- Login screen (hidden by default) -->
+<div class="login-screen" id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <h1>Dossier</h1>
+    <div class="sub">Visa &amp; Passport Registry — Sign in</div>
+    <div class="field">
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="loginPass" type="password" placeholder="••••••••">
+    </div>
+    <button class="btn" id="loginBtn">Sign in</button>
+    <div class="error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Main app (hidden by default) -->
+<div class="app" id="mainApp" style="display:none;">
 
   <div class="masthead">
     <div>
       <h1>Dossier — Visa &amp; Passport Registry</h1>
       <div class="sub">Searchable case log · replaces the paper piles</div>
     </div>
-    <div class="meta" id="statsBox">— entries on file</div>
+    <div class="meta">
+      <span id="statsBox">— entries on file</span>
+      <button class="logout" id="logoutBtn">Sign out</button>
+    </div>
   </div>
 
   <div class="toolbar">
@@ -238,8 +312,8 @@
           <th>Last name</th>
           <th>First name</th>
           <th>Passport no.</th>
-          <th>Nationality</th>
           <th>Category</th>
+          <th>Paid</th>
           <th>Date added</th>
           <th></th>
         </tr>
@@ -266,7 +340,7 @@
 
       <div class="scan-zone" id="scanZone">
         <div class="title">📷 Scan &amp; autofill from passport</div>
-        <div class="hint">Upload a photo, scan, or PDF of the bio-data page — the MRZ (the two lines at the bottom) will be read automatically</div>
+        <div class="hint">Upload a photo, scan, or PDF of the bio-data page — the MRZ will be read automatically</div>
         <input type="file" id="f_scanInput" accept="image/*,application/pdf" style="display:none;">
         <div class="scan-status" id="scanStatus"></div>
       </div>
@@ -332,7 +406,12 @@
       <div class="field-row">
         <div class="field">
           <label>Category</label>
-          <select id="f_category"></select>
+          <select id="f_category">
+            <option value="first">First Application</option>
+            <option value="renewal">Renewal</option>
+            <option value="family">Family Visit</option>
+            <option value="affair">Business / Affair</option>
+          </select>
         </div>
         <div class="field">
           <label>Visa number</label>
@@ -354,8 +433,30 @@
           <label>Date added</label>
           <input id="f_date" type="date">
         </div>
-        <div class="field"></div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check-row">
+            <input type="checkbox" id="f_paid">
+            <label for="f_paid">Paid</label>
+          </div>
+        </div>
       </div>
+
+      <div class="section-label">Group / family</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Group label</label>
+          <input id="f_groupLabel" type="text" placeholder="e.g. Benbertal family">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check-row">
+            <input type="checkbox" id="f_isPrimary">
+            <label for="f_isPrimary">Primary applicant (head of group)</label>
+          </div>
+        </div>
+      </div>
+
       <div class="field-row">
         <div class="field full">
           <label>Notes</label>
@@ -364,7 +465,7 @@
       </div>
       <div class="field-row">
         <div class="field full">
-          <label>Attach another scan (optional — e.g. visa page, or manual attach without OCR)</label>
+          <label>Attach scan (optional)</label>
           <div class="attach-box" id="attachBox">
             <div id="attachPrompt">Click to attach an image, or drop one here</div>
             <img id="attachPreview" style="display:none;">
@@ -389,8 +490,15 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const DEFAULT_CATEGORIES = [
+// ---- Supabase config ----
+const SUPABASE_URL = 'https://czxwafbtlhmzwcikyxny.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6eHdhZmJ0bGhtendjaWt5eG55Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ5OTk2NTUsImV4cCI6MjEwMDU3NTY1NX0.0dAXpf-Ap-RVPoDYefFM-Bzkbbyf5rR945FeQyLGycE';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// ---- Constants ----
+const CATEGORIES = [
   {id:'first', label:'First Application', color:'var(--cat-first)'},
   {id:'renewal', label:'Renewal', color:'var(--cat-renewal)'},
   {id:'family', label:'Family Visit', color:'var(--cat-family)'},
@@ -411,11 +519,11 @@ const MRZ_COUNTRY_MAP = {
 };
 
 let entries = [];
-let categories = [];
 let activeTab = 'all';
 let editingId = null;
 let pendingImageDataUrl = null;
 let pendingImageRemoved = false;
+let pendingUploadFile = null;
 
 const $ = (id) => document.getElementById(id);
 const toastEl = $('toast');
@@ -425,33 +533,72 @@ function toast(msg){
   setTimeout(()=>toastEl.classList.remove('show'), 1800);
 }
 
-async function loadData(){
-  try{
-    const res = await window.storage.get('entries', false);
-    entries = res ? JSON.parse(res.value) : [];
-  }catch(e){ entries = []; }
-  try{
-    const res = await window.storage.get('categories', false);
-    categories = res ? JSON.parse(res.value) : [...DEFAULT_CATEGORIES];
-  }catch(e){ categories = [...DEFAULT_CATEGORIES]; }
+// ---- Auth ----
+async function checkSession(){
+  const { data: { session } } = await supabase.auth.getSession();
+  if(session){
+    showApp();
+  } else {
+    showLogin();
+  }
+}
+
+function showLogin(){
+  $('loadingScreen').style.display = 'none';
+  $('loginScreen').style.display = 'flex';
+  $('mainApp').style.display = 'none';
+}
+
+function showApp(){
+  $('loadingScreen').style.display = 'none';
+  $('loginScreen').style.display = 'none';
+  $('mainApp').style.display = 'block';
+  loadEntries();
+}
+
+$('loginBtn').onclick = async ()=>{
+  const email = $('loginEmail').value.trim();
+  const pass = $('loginPass').value;
+  if(!email || !pass){ $('loginError').textContent = 'Enter email and password'; return; }
+  $('loginError').textContent = '';
+  $('loginBtn').textContent = 'Signing in…';
+  const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
+  $('loginBtn').textContent = 'Sign in';
+  if(error){
+    $('loginError').textContent = error.message;
+  } else {
+    showApp();
+  }
+};
+$('loginPass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') $('loginBtn').click(); });
+$('loginEmail').addEventListener('keydown', (e)=>{ if(e.key==='Enter') $('loginPass').focus(); });
+
+$('logoutBtn').onclick = async ()=>{
+  await supabase.auth.signOut();
+  entries = [];
+  showLogin();
+};
+
+// ---- Data ----
+async function loadEntries(){
+  const { data, error } = await supabase
+    .from('applications')
+    .select('*')
+    .order('date_added', { ascending: false });
+  if(error){
+    console.error(error);
+    toast('Error loading data — check your connection');
+    entries = [];
+  } else {
+    entries = data || [];
+  }
   renderTabs();
   renderTable();
   renderStats();
 }
 
-async function saveEntries(){
-  try{
-    await window.storage.set('entries', JSON.stringify(entries), false);
-  }catch(e){ toast('Could not save — storage error'); }
-}
-async function saveCategories(){
-  try{
-    await window.storage.set('categories', JSON.stringify(categories), false);
-  }catch(e){ toast('Could not save categories'); }
-}
-
 function catInfo(id){
-  return categories.find(c=>c.id===id) || {id, label:id, color:'var(--cat-other)'};
+  return CATEGORIES.find(c=>c.id===id) || {id, label:id, color:'var(--cat-other)'};
 }
 
 function renderStats(){
@@ -468,7 +615,7 @@ function renderTabs(){
   allTab.onclick = ()=>{ activeTab='all'; renderTabs(); renderTable(); };
   tabsEl.appendChild(allTab);
 
-  categories.forEach(cat=>{
+  CATEGORIES.forEach(cat=>{
     const count = entries.filter(e=>e.category===cat.id).length;
     const t = document.createElement('div');
     t.className = 'tab' + (activeTab===cat.id ? ' active' : '');
@@ -478,36 +625,18 @@ function renderTabs(){
     t.onclick = ()=>{ activeTab=cat.id; renderTabs(); renderTable(); };
     tabsEl.appendChild(t);
   });
-
-  const addTab = document.createElement('div');
-  addTab.className = 'tab add-tab';
-  addTab.textContent = '+ Add category';
-  addTab.onclick = addCategory;
-  tabsEl.appendChild(addTab);
-}
-
-async function addCategory(){
-  const label = prompt('New category name (e.g. "Student Visa")');
-  if(!label) return;
-  const id = 'cat_' + Date.now();
-  const palette = ['#7A5C3E','#3E6B7A','#7A3E5C','#5C7A3E','#3E4A7A'];
-  const color = palette[categories.length % palette.length];
-  categories.push({id, label, color});
-  await saveCategories();
-  renderTabs();
 }
 
 function matchesSearch(e, q){
   if(!q) return true;
   q = q.toLowerCase();
-  return [e.lastName, e.firstName, e.passportNumber, e.visaNumber, e.phone, e.email, e.notes, e.nationality, e.placeOfBirth, e.authority]
+  return [e.last_name, e.first_name, e.passport_number, e.visa_number, e.phone, e.email, e.notes, e.nationality, e.place_of_birth, e.authority, e.group_label]
     .some(v => (v||'').toLowerCase().includes(q));
 }
 
 function renderTable(){
   const q = $('searchInput').value.trim();
   let list = entries.filter(e => (activeTab==='all' || e.category===activeTab) && matchesSearch(e,q));
-  list = list.slice().sort((a,b)=> (b.dateAdded||'').localeCompare(a.dateAdded||''));
 
   const tbody = $('tbody');
   tbody.innerHTML = '';
@@ -519,12 +648,12 @@ function renderTable(){
     const tr = document.createElement('tr');
     tr.onclick = ()=> openModal(e.id);
     tr.innerHTML = `
-      <td class="name-cell" data-label="Last name">${escapeHtml(e.lastName||'—')}</td>
-      <td data-label="First name">${escapeHtml(e.firstName||'—')}</td>
-      <td class="mono" data-label="Passport no.">${escapeHtml(e.passportNumber||'—')}</td>
-      <td data-label="Nationality">${escapeHtml(e.nationality||'—')}</td>
-      <td data-label="Category"><span class="badge" style="background:${cat.color}">${escapeHtml(cat.label)}</span></td>
-      <td class="mono" data-label="Date added">${escapeHtml(e.dateAdded||'—')}</td>
+      <td class="name-cell" data-label="Last name">${esc(e.last_name||'—')}${e.group_label ? `<span class="group-badge">GROUP: ${esc(e.group_label)}</span>` : ''}</td>
+      <td data-label="First name">${esc(e.first_name||'—')}</td>
+      <td class="mono" data-label="Passport no.">${esc(e.passport_number||'—')}</td>
+      <td data-label="Category"><span class="badge" style="background:${cat.color}">${esc(cat.label)}</span></td>
+      <td data-label="Paid">${e.paid ? '<span class="badge paid-badge">Paid</span>' : '<span class="badge unpaid-badge">Unpaid</span>'}</td>
+      <td class="mono" data-label="Date added">${esc(e.date_added||'—')}</td>
       <td data-label="">
         <div class="row-actions">
           <button class="edit" data-id="${e.id}">Edit</button>
@@ -535,10 +664,14 @@ function renderTable(){
     tr.querySelector('.edit').onclick = (ev)=>{ ev.stopPropagation(); openModal(e.id); };
     tr.querySelector('.del').onclick = async (ev)=>{
       ev.stopPropagation();
-      if(!confirm(`Delete the entry for ${e.lastName||'this person'}?`)) return;
+      if(!confirm(`Delete the entry for ${e.last_name||'this person'}?`)) return;
+      const { error } = await supabase.from('applications').delete().eq('id', e.id);
+      if(error){ toast('Delete failed'); return; }
+      // Also delete image if exists
+      if(e.has_image){
+        await supabase.storage.from('scans').remove([`scans/${e.id}.jpg`]);
+      }
       entries = entries.filter(x=>x.id!==e.id);
-      try{ await window.storage.delete('image:'+e.id, false); }catch(err){}
-      await saveEntries();
       renderTabs();
       renderTable();
       toast('Entry deleted');
@@ -548,17 +681,214 @@ function renderTable(){
   renderStats();
 }
 
-function escapeHtml(s){
+function esc(s){
   return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
-function populateCategorySelect(){
-  const sel = $('f_category');
-  sel.innerHTML = categories.map(c=>`<option value="${c.id}">${escapeHtml(c.label)}</option>`).join('');
+// ---- Modal ----
+function openModal(id){
+  editingId = id || null;
+  pendingImageDataUrl = null;
+  pendingImageRemoved = false;
+  pendingUploadFile = null;
+  $('deleteBtn').style.display = id ? 'inline-block' : 'none';
+  $('attachPrompt').style.display = 'block';
+  $('attachPreview').style.display = 'none';
+  $('f_image').value = '';
+  setScanStatus('', '');
+  $('f_scanInput').value = '';
+  ['wrap_passport','wrap_nationality','wrap_lastName','wrap_firstName','wrap_dob','wrap_sex','wrap_expiryDate'].forEach(w=>{
+    const el = $(w); if(el) el.classList.remove('verified','unverified');
+  });
+
+  if(id){
+    const e = entries.find(x=>x.id===id);
+    $('modalTitle').textContent = 'Edit entry';
+    $('f_category').value = e.category;
+    $('f_date').value = e.date_added || '';
+    $('f_lastName').value = e.last_name || '';
+    $('f_firstName').value = e.first_name || '';
+    $('f_passport').value = e.passport_number || '';
+    $('f_nationality').value = e.nationality || '';
+    $('f_dob').value = e.dob || '';
+    $('f_pob').value = e.place_of_birth || '';
+    $('f_sex').value = e.sex || '';
+    $('f_issueDate').value = e.issue_date || '';
+    $('f_expiryDate').value = e.expiry_date || '';
+    $('f_authority').value = e.authority || '';
+    $('f_visa').value = e.visa_number || '';
+    $('f_phone').value = e.phone || '';
+    $('f_email').value = e.email || '';
+    $('f_notes').value = e.notes || '';
+    $('f_paid').checked = !!e.paid;
+    $('f_groupLabel').value = e.group_label || '';
+    $('f_isPrimary').checked = !!e.is_primary;
+    // Load existing image
+    if(e.has_image){
+      const { data } = supabase.storage.from('scans').getPublicUrl(`scans/${e.id}.jpg`);
+      if(data && data.publicUrl){
+        $('attachPreview').src = data.publicUrl;
+        $('attachPreview').style.display = 'block';
+        $('attachPrompt').style.display = 'none';
+      }
+    }
+  } else {
+    $('modalTitle').textContent = 'New entry';
+    $('f_category').value = activeTab !== 'all' ? activeTab : 'first';
+    $('f_date').value = new Date().toISOString().slice(0,10);
+    $('f_paid').checked = false;
+    $('f_groupLabel').value = '';
+    $('f_isPrimary').checked = false;
+    ['f_lastName','f_firstName','f_passport','f_nationality','f_dob','f_pob','f_sex','f_issueDate','f_expiryDate','f_authority','f_visa','f_phone','f_email','f_notes'].forEach(id=>$(id).value='');
+  }
+  $('overlay').classList.add('open');
 }
 
-// ---------- MRZ (machine-readable zone) parsing ----------
+function closeModal(){
+  $('overlay').classList.remove('open');
+  editingId = null;
+}
 
+$('newBtn').onclick = ()=> openModal(null);
+$('closeModal').onclick = closeModal;
+$('cancelBtn').onclick = closeModal;
+$('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
+
+// ---- Image attach ----
+$('attachBox').onclick = ()=> $('f_image').click();
+$('f_image').addEventListener('change', (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  pendingUploadFile = file;
+  pendingImageRemoved = false;
+  const reader = new FileReader();
+  reader.onload = (ev)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const maxW = 1000;
+      const scale = Math.min(1, maxW / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      pendingImageDataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      $('attachPreview').src = pendingImageDataUrl;
+      $('attachPreview').style.display = 'block';
+      $('attachPrompt').style.display = 'none';
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+// ---- Save ----
+$('saveBtn').onclick = async ()=>{
+  const data = {
+    category: $('f_category').value,
+    date_added: $('f_date').value,
+    last_name: $('f_lastName').value.trim(),
+    first_name: $('f_firstName').value.trim(),
+    passport_number: $('f_passport').value.trim(),
+    nationality: $('f_nationality').value.trim(),
+    dob: $('f_dob').value,
+    place_of_birth: $('f_pob').value.trim(),
+    sex: $('f_sex').value,
+    issue_date: $('f_issueDate').value,
+    expiry_date: $('f_expiryDate').value,
+    authority: $('f_authority').value.trim(),
+    visa_number: $('f_visa').value.trim(),
+    phone: $('f_phone').value.trim(),
+    email: $('f_email').value.trim(),
+    notes: $('f_notes').value.trim(),
+    paid: $('f_paid').checked,
+    group_label: $('f_groupLabel').value.trim(),
+    is_primary: $('f_isPrimary').checked,
+  };
+  if(!data.last_name && !data.passport_number){
+    toast('Add at least a last name or passport number');
+    return;
+  }
+
+  $('saveBtn').textContent = 'Saving…';
+  $('saveBtn').disabled = true;
+
+  try {
+    if(editingId){
+      const { error } = await supabase.from('applications').update(data).eq('id', editingId);
+      if(error) throw error;
+
+      // Handle image upload/remove
+      if(pendingImageRemoved){
+        await supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
+        await supabase.from('applications').update({ has_image: false }).eq('id', editingId);
+      } else if(pendingUploadFile){
+        await supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
+        await supabase.from('applications').update({ has_image: true }).eq('id', editingId);
+      }
+    } else {
+      // Insert to get an ID
+      const { data: inserted, error } = await supabase.from('applications').insert(data).select().single();
+      if(error) throw error;
+      editingId = inserted.id;
+      entries.unshift(inserted);
+
+      // Upload image if any
+      if(pendingUploadFile){
+        await supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
+        await supabase.from('applications').update({ has_image: true }).eq('id', editingId);
+      }
+    }
+
+    await loadEntries();
+    closeModal();
+    toast('Entry saved');
+  } catch(err){
+    console.error(err);
+    toast('Save failed — ' + (err.message || 'unknown error'));
+  } finally {
+    $('saveBtn').textContent = 'Save entry';
+    $('saveBtn').disabled = false;
+  }
+};
+
+// ---- Delete ----
+$('deleteBtn').onclick = async ()=>{
+  if(!editingId) return;
+  if(!confirm('Delete this entry permanently?')) return;
+  const { error } = await supabase.from('applications').delete().eq('id', editingId);
+  if(error){ toast('Delete failed'); return; }
+  const entry = entries.find(x=>x.id===editingId);
+  if(entry && entry.has_image){
+    await supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
+  }
+  entries = entries.filter(x=>x.id!==editingId);
+  renderTabs();
+  renderTable();
+  closeModal();
+  toast('Entry deleted');
+};
+
+// ---- Search ----
+$('searchInput').addEventListener('input', renderTable);
+
+// ---- Export CSV ----
+$('exportBtn').onclick = ()=>{
+  const rows = [['Category','Last Name','First Name','Passport Number','Nationality','Date of Birth','Place of Birth','Sex','Issue Date','Expiry Date','Authority','Visa Number','Phone','Email','Paid','Date Added','Group','Notes']];
+  entries.forEach(e=>{
+    rows.push([catInfo(e.category).label, e.last_name, e.first_name, e.passport_number, e.nationality, e.dob, e.place_of_birth, e.sex, e.issue_date, e.expiry_date, e.authority, e.visa_number, e.phone, e.email, e.paid?'Yes':'No', e.date_added, e.group_label, (e.notes||'').replace(/\n/g,' ')]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'visa_registry_export.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV exported');
+};
+
+// ---- MRZ Parsing ----
 function mrzCharValue(c){
   if(c === '<') return 0;
   if(c >= '0' && c <= '9') return c.charCodeAt(0) - 48;
@@ -582,13 +912,11 @@ function mrzDateToISO(yymmdd, preferFuture){
   return `${y}-${mm}-${dd}`;
 }
 
-// Find two 44-char-ish MRZ candidate lines inside raw OCR text
 function extractMrzLines(rawText){
   const lines = rawText.toUpperCase().split('\n')
     .map(l => l.replace(/[^A-Z0-9<]/g,''))
     .filter(l => l.length >= 30 && (l.match(/</g)||[]).length >= 3);
   if(lines.length < 2) return null;
-  // Prefer the two longest candidate lines, in original order
   const sorted = lines.slice().sort((a,b)=>b.length-a.length).slice(0,2);
   const ordered = lines.filter(l => sorted.includes(l)).slice(0,2);
   const pad = l => (l.length >= 44 ? l.slice(0,44) : l.padEnd(44,'<'));
@@ -597,11 +925,8 @@ function extractMrzLines(rawText){
 
 function parseTD3(line1, line2){
   const result = {valid:{}};
-  // Line 1: type(2) + country(3) + names(39)
   const country = line1.slice(2,5).replace(/</g,'');
   const nameField = line1.slice(5,44);
-  // Surname/given-names boundary is 2+ consecutive '<' (OCR sometimes reads 3+ or drops one).
-  // A single '<' inside either part just separates multiple names (e.g. compound surnames, multiple given names).
   const nameParts = nameField.split(/<{2,}/);
   const surnamePart = nameParts[0] || '';
   const givenPart = nameParts[1] || '';
@@ -610,7 +935,6 @@ function parseTD3(line1, line2){
   result.nationality = MRZ_COUNTRY_MAP[country] || country;
   result.countryCode = country;
 
-  // Line 2
   const passportNumRaw = line2.slice(0,9);
   const passportCheck = line2[9];
   const dobRaw = line2.slice(13,19);
@@ -709,7 +1033,8 @@ async function handleScanFile(file){
     setScanStatus('Preparing image…', 'busy');
     const fullCanvas = await fileToImageCanvas(file, 1600);
 
-    // Auto-attach the scan itself, same as the manual attach flow
+    // Auto-attach the scan
+    pendingUploadFile = file;
     pendingImageDataUrl = fullCanvas.toDataURL('image/jpeg', 0.6);
     pendingImageRemoved = false;
     $('attachPreview').src = pendingImageDataUrl;
@@ -719,8 +1044,6 @@ async function handleScanFile(file){
     setScanStatus('Reading MRZ…', 'busy');
     const mrzCrop = cropBottom(fullCanvas, 0.30);
 
-    // Primary approach: OCR each MRZ line separately as its own single line — far more
-    // reliable for reading the '<' fill characters than one pass over both lines.
     let lines = null;
     try{
       const line1Text = await ocrText(cropStrip(mrzCrop, 0.10, 0.52), true);
@@ -731,9 +1054,8 @@ async function handleScanFile(file){
         const pad = l => (l.length >= 44 ? l.slice(0,44) : l.padEnd(44,'<'));
         lines = [pad(l1), pad(l2)];
       }
-    }catch(e){ /* fall through to whole-block attempt */ }
+    }catch(e){}
 
-    // Fallback: OCR the whole two-line block at once and try to split it into lines.
     if(!lines){
       const text = await ocrText(mrzCrop, false);
       lines = extractMrzLines(text);
@@ -743,7 +1065,7 @@ async function handleScanFile(file){
       lines = extractMrzLines(text);
     }
     if(!lines){
-      setScanStatus('Could not locate the MRZ lines clearly — the scan was attached, but please fill fields in manually.', 'warn');
+      setScanStatus('Could not locate the MRZ — scan attached, fill fields manually.', 'warn');
       return;
     }
 
@@ -762,13 +1084,13 @@ async function handleScanFile(file){
 
     const allOk = parsed.valid.passport && parsed.valid.dob && parsed.valid.expiry;
     if(allOk){
-      setScanStatus('MRZ read and verified — bio-data fields filled in below.', 'ok');
+      setScanStatus('MRZ read and verified — fields filled below.', 'ok');
     } else {
-      setScanStatus('MRZ read, but some checksums didn\'t match (highlighted in red) — please double-check those fields.', 'warn');
+      setScanStatus('MRZ read, some checksums failed (red) — double-check those fields.', 'warn');
     }
     toast('Passport scan processed');
   }catch(err){
-    setScanStatus('Something went wrong reading that file — the scan may still be attached below. Please fill fields in manually.', 'warn');
+    setScanStatus('Error reading file — scan attached, fill fields manually.', 'warn');
   }
 }
 
@@ -784,172 +1106,8 @@ $('scanZone').addEventListener('drop', (e)=>{
   if(file) handleScanFile(file);
 });
 
-function openModal(id){
-  editingId = id || null;
-  pendingImageDataUrl = null;
-  pendingImageRemoved = false;
-  populateCategorySelect();
-  $('deleteBtn').style.display = id ? 'inline-block' : 'none';
-  $('attachPrompt').style.display = 'block';
-  $('attachPreview').style.display = 'none';
-  $('f_image').value = '';
-  setScanStatus('', '');
-  $('f_scanInput').value = '';
-  ['wrap_passport','wrap_nationality','wrap_lastName','wrap_firstName','wrap_dob','wrap_sex','wrap_expiryDate'].forEach(w=>{
-    const el = $(w); if(el) el.classList.remove('verified','unverified');
-  });
-
-  if(id){
-    const e = entries.find(x=>x.id===id);
-    $('modalTitle').textContent = 'Edit entry';
-    $('f_category').value = e.category;
-    $('f_date').value = e.dateAdded || '';
-    $('f_lastName').value = e.lastName || '';
-    $('f_firstName').value = e.firstName || '';
-    $('f_passport').value = e.passportNumber || '';
-    $('f_nationality').value = e.nationality || '';
-    $('f_dob').value = e.dob || '';
-    $('f_pob').value = e.placeOfBirth || '';
-    $('f_sex').value = e.sex || '';
-    $('f_issueDate').value = e.issueDate || '';
-    $('f_expiryDate').value = e.expiryDate || '';
-    $('f_authority').value = e.authority || '';
-    $('f_visa').value = e.visaNumber || '';
-    $('f_phone').value = e.phone || '';
-    $('f_email').value = e.email || '';
-    $('f_notes').value = e.notes || '';
-    if(e.hasImage){
-      window.storage.get('image:'+id, false).then(res=>{
-        if(res){
-          $('attachPreview').src = res.value;
-          $('attachPreview').style.display = 'block';
-          $('attachPrompt').style.display = 'none';
-        }
-      }).catch(()=>{});
-    }
-  } else {
-    $('modalTitle').textContent = 'New entry';
-    $('f_category').value = activeTab !== 'all' ? activeTab : categories[0].id;
-    $('f_date').value = new Date().toISOString().slice(0,10);
-    ['f_lastName','f_firstName','f_passport','f_nationality','f_dob','f_pob','f_sex','f_issueDate','f_expiryDate','f_authority','f_visa','f_phone','f_email','f_notes'].forEach(id=>$(id).value='');
-  }
-  $('overlay').classList.add('open');
-}
-
-function closeModal(){
-  $('overlay').classList.remove('open');
-  editingId = null;
-}
-
-$('newBtn').onclick = ()=> openModal(null);
-$('closeModal').onclick = closeModal;
-$('cancelBtn').onclick = closeModal;
-$('overlay').addEventListener('click', (e)=>{ if(e.target.id==='overlay') closeModal(); });
-
-$('attachBox').onclick = ()=> $('f_image').click();
-$('f_image').addEventListener('change', (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev)=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const maxW = 1000;
-      const scale = Math.min(1, maxW / img.width);
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      pendingImageDataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      pendingImageRemoved = false;
-      $('attachPreview').src = pendingImageDataUrl;
-      $('attachPreview').style.display = 'block';
-      $('attachPrompt').style.display = 'none';
-    };
-    img.src = ev.target.result;
-  };
-  reader.readAsDataURL(file);
-});
-
-$('saveBtn').onclick = async ()=>{
-  const data = {
-    category: $('f_category').value,
-    dateAdded: $('f_date').value,
-    lastName: $('f_lastName').value.trim(),
-    firstName: $('f_firstName').value.trim(),
-    passportNumber: $('f_passport').value.trim(),
-    nationality: $('f_nationality').value.trim(),
-    dob: $('f_dob').value,
-    placeOfBirth: $('f_pob').value.trim(),
-    sex: $('f_sex').value,
-    issueDate: $('f_issueDate').value,
-    expiryDate: $('f_expiryDate').value,
-    authority: $('f_authority').value.trim(),
-    visaNumber: $('f_visa').value.trim(),
-    phone: $('f_phone').value.trim(),
-    email: $('f_email').value.trim(),
-    notes: $('f_notes').value.trim(),
-  };
-  if(!data.lastName && !data.passportNumber){
-    toast('Add at least a last name or passport number');
-    return;
-  }
-
-  if(editingId){
-    const idx = entries.findIndex(x=>x.id===editingId);
-    const hasImage = pendingImageRemoved ? false : (pendingImageDataUrl ? true : entries[idx].hasImage);
-    entries[idx] = {...entries[idx], ...data, hasImage};
-    if(pendingImageDataUrl){
-      try{ await window.storage.set('image:'+editingId, pendingImageDataUrl, false); }catch(e){}
-    } else if(pendingImageRemoved){
-      try{ await window.storage.delete('image:'+editingId, false); }catch(e){}
-    }
-  } else {
-    const id = 'e_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-    entries.push({id, ...data, hasImage: !!pendingImageDataUrl});
-    if(pendingImageDataUrl){
-      try{ await window.storage.set('image:'+id, pendingImageDataUrl, false); }catch(e){}
-    }
-  }
-  await saveEntries();
-  renderTabs();
-  renderTable();
-  closeModal();
-  toast('Entry saved');
-};
-
-$('deleteBtn').onclick = async ()=>{
-  if(!editingId) return;
-  if(!confirm('Delete this entry permanently?')) return;
-  entries = entries.filter(x=>x.id!==editingId);
-  try{ await window.storage.delete('image:'+editingId, false); }catch(e){}
-  await saveEntries();
-  renderTabs();
-  renderTable();
-  closeModal();
-  toast('Entry deleted');
-};
-
-$('searchInput').addEventListener('input', renderTable);
-
-$('exportBtn').onclick = ()=>{
-  const rows = [['Category','Last Name','First Name','Passport Number','Nationality','Date of Birth','Place of Birth','Sex','Issue Date','Expiry Date','Authority','Visa Number','Phone','Email','Date Added','Notes']];
-  entries.forEach(e=>{
-    rows.push([catInfo(e.category).label, e.lastName, e.firstName, e.passportNumber, e.nationality, e.dob, e.placeOfBirth, e.sex, e.issueDate, e.expiryDate, e.authority, e.visaNumber, e.phone, e.email, e.dateAdded, (e.notes||'').replace(/\n/g,' ')]);
-  });
-  const csv = rows.map(r => r.map(v => `"${String(v||'').replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob([csv], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'visa_registry_export.csv';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('CSV exported');
-};
-
-loadData();
+// ---- Init ----
+checkSession();
 </script>
 </body>
 </html>
