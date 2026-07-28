@@ -989,7 +989,7 @@ function openModal(id){
     $('modalTitle').textContent = 'New entry';
     $('f_category').value = activeTab !== 'all' ? activeTab : 'first';
     $('f_status').value = 'pending';
-    $('f_date').value = 今天();
+    $('f_date').value = todayStr();
     $('f_paid').checked = false;
     $('f_groupLabel').value = '';
     $('f_isPrimary').checked = false;
@@ -1423,7 +1423,7 @@ function displayToIso(disp){
   if(parseInt(m)<1||parseInt(m)>12||parseInt(d)<1||parseInt(d)>31) return '';
   return y+'-'+m+'-'+d;
 }
-function今天(){
+function todayStr(){
   const now = new Date();
   const dd = String(now.getDate()).padStart(2,'0');
   const mm = String(now.getMonth()+1).padStart(2,'0');
