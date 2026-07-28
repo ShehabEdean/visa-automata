@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dossier — Visa &amp; Passport Registry</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Motion blur plane background -->
+<div class="plane-wrap">
+  <div class="plane-group">
+    <div class="plane-trail"></div>
+    <div class="plane-icon">✈</div>
+  </div>
+  <div class="plane-group reverse">
+    <div class="plane-trail"></div>
+    <div class="plane-icon">✈</div>
+  </div>
+</div>
+
+<!-- Loading screen -->
+<div class="loading-screen" id="loadingScreen">Loading…</div>
+
+<!-- Login screen (hidden by default) -->
+<div class="login-screen" id="loginScreen" style="display:none;">
+  <div class="login-card">
+    <h1>Dossier</h1>
+    <div class="sub">Visa &amp; Passport Registry — Sign in</div>
+    <div class="field">
+      <label>Email</label>
+      <input id="loginEmail" type="email" placeholder="you@example.com">
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input id="loginPass" type="password" placeholder="••••••••">
+    </div>
+    <button class="btn" id="loginBtn">Sign in</button>
+    <div class="error" id="loginError"></div>
+  </div>
+</div>
+
+<!-- Main app (hidden by default) -->
+<div class="app" id="mainApp" style="display:none;">
+
+  <div class="masthead">
+    <div>
+      <h1>Dossier — Visa &amp; Passport Registry</h1>
+      <div class="sub">Searchable case log · replaces the paper piles</div>
+    </div>
+    <div class="meta">
+      <span id="statsBox">— entries on file</span>
+      <button class="logout" id="themeToggle" title="Toggle dark mode">☀️</button>
+      <button class="logout" id="logoutBtn">Sign out</button>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input id="searchInput" type="text" placeholder="Search by last name, passport no., nationality, visa no., phone, email…">
+    </div>
+    <button class="btn secondary" id="exportBtn">Export CSV</button>
+    <button class="btn" id="newBtn">+ New entry</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="archive">
+    <table id="table">
+      <thead>
+        <tr>
+          <th>Last name</th>
+          <th>First name</th>
+          <th>Passport no.</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Paid</th>
+          <th>Date added</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="stamp">NO RECORDS FOUND</div>
+      <div>Try a different search, or add a new entry.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Entry modal -->
+<div class="overlay" id="overlay">
+  <div class="card">
+    <div class="card-head">
+      <h2 id="modalTitle">New entry</h2>
+      <button id="closeModal">✕</button>
+    </div>
+    <div class="card-body">
+
+      <div class="section-label">Bio-data page (as printed on passport)</div>
+
+      <div class="scan-zone" id="scanZone">
+        <div class="title">📷 Scan &amp; autofill from passport</div>
+        <div class="hint">Upload a photo, scan, or PDF of the bio-data page — the MRZ will be read automatically</div>
+        <input type="file" id="f_scanInput" accept="image/*,application/pdf" style="display:none;">
+        <div class="scan-status" id="scanStatus"></div>
+      </div>
+
+      <div class="passport-block">
+        <div class="field-row">
+          <div class="field" id="wrap_passport">
+            <label>N° de Passeport / Passport No.</label>
+            <input id="f_passport" type="text" placeholder="e.g. 123456789" inputmode="numeric" maxlength="9">
+          </div>
+          <div class="field" id="wrap_nationality">
+            <label>Nationalité / Nationality</label>
+            <select id="f_nationality">
+              <option value="">—</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field" id="wrap_lastName">
+            <label>Nom / Surname</label>
+            <input id="f_lastName" type="text" placeholder="e.g. BENBERTAL">
+          </div>
+          <div class="field" id="wrap_firstName">
+            <label>Prénom(s) / Given Names</label>
+            <input id="f_firstName" type="text" placeholder="e.g. Ali Chihab Edine">
+          </div>
+        </div>
+        <div class="field-row tri">
+          <div class="field" id="wrap_dob">
+            <label>Date de Naissance / DOB</label>
+            <input id="f_dob" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
+          </div>
+          <div class="field">
+            <label>Lieu de Naissance / POB</label>
+            <select id="f_pob">
+              <option value="">—</option>
+            </select>
+          </div>
+          <div class="field" id="wrap_sex">
+            <label>Sexe / Sex</label>
+            <select id="f_sex">
+              <option value="">—</option>
+              <option value="M">M</option>
+              <option value="F">F</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Date de Délivrance / Issue Date</label>
+            <input id="f_issueDate" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
+          </div>
+          <div class="field" id="wrap_expiryDate">
+            <label>Date d'Expiration / Expiry Date</label>
+            <input id="f_expiryDate" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field full">
+            <label>Autorité de Délivrance / Issuing Authority</label>
+            <select id="f_authority">
+              <option value="">—</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Application / case details</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Category</label>
+          <select id="f_category">
+            <option value="first">First Application</option>
+            <option value="renewal">Renewal</option>
+            <option value="family">Family Visit</option>
+            <option value="affair">Business / Affair</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Status</label>
+          <select id="f_status">
+            <option value="pending">Pending</option>
+            <option value="submitted">Submitted</option>
+            <option value="interview">Interview</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="complete">Complete</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Visa number</label>
+          <input id="f_visa" type="text" placeholder="if applicable">
+        </div>
+        <div class="field"></div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Phone</label>
+          <input id="f_phone" type="text">
+        </div>
+        <div class="field">
+          <label>Email</label>
+          <input id="f_email" type="text">
+        </div>
+      </div>
+      <div class="field-row">
+          <div class="field">
+            <label>Date added</label>
+            <input id="f_date" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
+          </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check-row">
+            <input type="checkbox" id="f_paid">
+            <label for="f_paid">Paid</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-label">Group / family</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Group label</label>
+          <input id="f_groupLabel" type="text" placeholder="e.g. Benbertal family">
+        </div>
+        <div class="field">
+          <label>&nbsp;</label>
+          <div class="check-row">
+            <input type="checkbox" id="f_isPrimary">
+            <label for="f_isPrimary">Primary applicant (head of group)</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field-row">
+        <div class="field full">
+          <label>Notes</label>
+          <textarea id="f_notes" placeholder="Anything else worth flagging on this case"></textarea>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field full">
+          <label>Attach scan (optional)</label>
+          <div class="attach-box" id="attachBox">
+            <div id="attachPrompt">Click to attach an image, or drop one here</div>
+            <img id="attachPreview" style="display:none;">
+          </div>
+          <input type="file" id="f_image" accept="image/*" style="display:none;">
+        </div>
+      </div>
+    </div>
+    <div class="card-foot">
+      <div class="left">
+        <button class="btn secondary" id="deleteBtn" style="display:none;color:var(--stamp-red);border-color:var(--stamp-red);">Delete</button>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn secondary" id="cancelBtn">Cancel</button>
+        <button class="btn" id="saveBtn">Save entry</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
