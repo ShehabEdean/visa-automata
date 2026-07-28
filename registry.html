@@ -21,6 +21,23 @@
     --cat-affair:#6B4468;
     --cat-other:#5A5A52;
     --shadow: 0 1px 2px rgba(28,43,74,0.08), 0 4px 12px rgba(28,43,74,0.06);
+    --input-bg:#fff;
+  }
+  [data-theme="dark"]{
+    --ink:#E8E6E0;
+    --ink-soft:#A0A0A0;
+    --paper:#1A1A2E;
+    --paper-raised:#22223A;
+    --line:#333355;
+    --stamp-red:#E85D4A;
+    --stamp-green:#5CA87A;
+    --cat-first:#6B9BD2;
+    --cat-renewal:#D4A843;
+    --cat-family:#5CAD8A;
+    --cat-affair:#A67CB0;
+    --cat-other:#8A8A7A;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.25);
+    --input-bg:#2A2A42;
   }
   *{box-sizing:border-box;}
   body{
@@ -216,7 +233,7 @@
   .field label{font-size:11px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.04em;}
   .field input,.field select,.field textarea{
     padding:9px 10px;border:1px solid var(--line);border-radius:6px;font-size:13.5px;
-    font-family:'Inter',sans-serif;background:#fff;color:var(--ink);
+    font-family:'Inter',sans-serif;background:var(--input-bg);color:var(--ink);
   }
   .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--ink);outline-offset:0;}
   .field textarea{resize:vertical;min-height:56px;}
@@ -291,6 +308,7 @@
     </div>
     <div class="meta">
       <span id="statsBox">— entries on file</span>
+      <button class="logout" id="themeToggle" title="Toggle dark mode">☀️</button>
       <button class="logout" id="logoutBtn">Sign out</button>
     </div>
   </div>
@@ -354,7 +372,9 @@
           </div>
           <div class="field" id="wrap_nationality">
             <label>Nationalité / Nationality</label>
-            <input id="f_nationality" type="text" placeholder="e.g. Algérienne">
+            <select id="f_nationality">
+              <option value="">—</option>
+            </select>
           </div>
         </div>
         <div class="field-row">
@@ -370,11 +390,13 @@
         <div class="field-row tri">
           <div class="field" id="wrap_dob">
             <label>Date de Naissance / DOB</label>
-            <input id="f_dob" type="date">
+            <input id="f_dob" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
           </div>
           <div class="field">
             <label>Lieu de Naissance / POB</label>
-            <input id="f_pob" type="text" placeholder="e.g. Laghouat">
+            <select id="f_pob">
+              <option value="">—</option>
+            </select>
           </div>
           <div class="field" id="wrap_sex">
             <label>Sexe / Sex</label>
@@ -388,17 +410,19 @@
         <div class="field-row">
           <div class="field">
             <label>Date de Délivrance / Issue Date</label>
-            <input id="f_issueDate" type="date">
+            <input id="f_issueDate" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
           </div>
           <div class="field" id="wrap_expiryDate">
             <label>Date d'Expiration / Expiry Date</label>
-            <input id="f_expiryDate" type="date">
+            <input id="f_expiryDate" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
           </div>
         </div>
         <div class="field-row">
           <div class="field full">
             <label>Autorité de Délivrance / Issuing Authority</label>
-            <input id="f_authority" type="text" placeholder="e.g. Wilaya de Laghouat">
+            <select id="f_authority">
+              <option value="">—</option>
+            </select>
           </div>
         </div>
       </div>
@@ -444,10 +468,10 @@
         </div>
       </div>
       <div class="field-row">
-        <div class="field">
-          <label>Date added</label>
-          <input id="f_date" type="date">
-        </div>
+          <div class="field">
+            <label>Date added</label>
+            <input id="f_date" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
+          </div>
         <div class="field">
           <label>&nbsp;</label>
           <div class="check-row">
@@ -705,6 +729,31 @@ const MRZ_COUNTRY_MAP = {
   IND:'Indienne', RUS:'Russe', PRT:'Portugaise', NLD:'Néerlandaise', BEL:'Belge', CHE:'Suisse',
 };
 
+const WILAYAS = [
+  'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar',
+  'Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger',
+  'Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma',
+  'Constantine','Médéa','Mostaganem','M\'Sila','Mascara','Ouargla','Oran','El Bayadh',
+  'Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela',
+  'Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane',
+  'El M\'Ghair','El Meniaa','Ouled Djellal','Bordj Badji Mokhtar','Béni Abbès','Timimoun',
+  'Touggourt','Djanet','In Salah','In Guezzam'
+];
+
+const NATIONALITIES = [
+  {code:'DZA',label:'Algérienne'},{code:'MAR',label:'Marocaine'},{code:'TUN',label:'Tunisienne'},
+  {code:'LBY',label:'Libyenne'},{code:'EGY',label:'Égyptienne'},{code:'SYR',label:'Syrienne'},
+  {code:'LBN',label:'Libanaise'},{code:'JOR',label:'Jordanienne'},{code:'MLI',label:'Malienne'},
+  {code:'NER',label:'Nigérienne'},{code:'SEN',label:'Sénégalaise'},{code:'CIV',label:'Ivoirienne'},
+  {code:'CMR',label:'Camerounaise'},{code:'SEN',label:'Sénégalaise'},
+  {code:'FRA',label:'Française'},{code:'ESP',label:'Espagnole'},{code:'ITA',label:'Italienne'},
+  {code:'DEU',label:'Allemande'},{code:'GBR',label:'Britannique'},{code:'USA',label:'Américaine'},
+  {code:'CAN',label:'Canadienne'},{code:'TUR',label:'Turque'},{code:'CHN',label:'Chinoise'},
+  {code:'IND',label:'Indienne'},{code:'RUS',label:'Russe'},{code:'PRT',label:'Portugaise'},
+  {code:'NLD',label:'Néerlandaise'},{code:'BEL',label:'Belge'},{code:'CHE',label:'Suisse'},
+  {code:'SAU',label:'Saoudienne'},{code:'ARE',label:'Émiratie'},{code:'QAT',label:'Qatarienne'},
+];
+
 let entries = [];
 let activeTab = 'all';
 let editingId = null;
@@ -856,7 +905,7 @@ function renderTable(){
       <td data-label="Category"><span class="badge" style="background:${cat.color}">${esc(cat.label)}</span></td>
       <td data-label="Status"><span class="badge" style="background:${statusInfo(e.status).color};color:#fff">${esc(statusInfo(e.status).label)}</span></td>
       <td data-label="Paid">${e.paid ? '<span class="badge paid-badge">Paid</span>' : '<span class="badge unpaid-badge">Unpaid</span>'}</td>
-      <td class="mono" data-label="Date added">${esc(e.date_added||'—')}</td>
+      <td class="mono" data-label="Date added">${esc(isoToDisplay(e.date_added)||e.date_added||'—')}</td>
       <td data-label="">
         <div class="row-actions">
           <button class="edit" data-id="${e.id}">Edit</button>
@@ -909,16 +958,16 @@ function openModal(id){
     $('modalTitle').textContent = 'Edit entry';
     $('f_category').value = e.category;
     $('f_status').value = e.status || 'pending';
-    $('f_date').value = e.date_added || '';
+    $('f_date').value = isoToDisplay(e.date_added) || e.date_added || '';
     $('f_lastName').value = e.last_name || '';
     $('f_firstName').value = e.first_name || '';
     $('f_passport').value = e.passport_number || '';
     $('f_nationality').value = e.nationality || '';
-    $('f_dob').value = e.dob || '';
+    $('f_dob').value = isoToDisplay(e.dob) || e.dob || '';
     $('f_pob').value = e.place_of_birth || '';
     $('f_sex').value = e.sex || '';
-    $('f_issueDate').value = e.issue_date || '';
-    $('f_expiryDate').value = e.expiry_date || '';
+    $('f_issueDate').value = isoToDisplay(e.issue_date) || e.issue_date || '';
+    $('f_expiryDate').value = isoToDisplay(e.expiry_date) || e.expiry_date || '';
     $('f_authority').value = e.authority || '';
     $('f_visa').value = e.visa_number || '';
     $('f_phone').value = e.phone || '';
@@ -940,7 +989,7 @@ function openModal(id){
     $('modalTitle').textContent = 'New entry';
     $('f_category').value = activeTab !== 'all' ? activeTab : 'first';
     $('f_status').value = 'pending';
-    $('f_date').value = new Date().toISOString().slice(0,10);
+    $('f_date').value = 今天();
     $('f_paid').checked = false;
     $('f_groupLabel').value = '';
     $('f_isPrimary').checked = false;
@@ -991,17 +1040,17 @@ $('saveBtn').onclick = async ()=>{
   const data = {
     category: $('f_category').value,
     status: $('f_status').value,
-    date_added: $('f_date').value,
+    date_added: displayToIso($('f_date').value) || $('f_date').value,
     last_name: $('f_lastName').value.trim(),
     first_name: $('f_firstName').value.trim(),
     passport_number: $('f_passport').value.trim(),
     nationality: $('f_nationality').value.trim(),
-    dob: $('f_dob').value,
-    place_of_birth: $('f_pob').value.trim(),
+    dob: displayToIso($('f_dob').value) || $('f_dob').value,
+    place_of_birth: $('f_pob').value,
     sex: $('f_sex').value,
-    issue_date: $('f_issueDate').value,
-    expiry_date: $('f_expiryDate').value,
-    authority: $('f_authority').value.trim(),
+    issue_date: displayToIso($('f_issueDate').value) || $('f_issueDate').value,
+    expiry_date: displayToIso($('f_expiryDate').value) || $('f_expiryDate').value,
+    authority: $('f_authority').value,
     visa_number: $('f_visa').value.trim(),
     phone: $('f_phone').value.trim(),
     email: $('f_email').value.trim(),
@@ -1280,9 +1329,9 @@ async function handleScanFile(file){
     if(parsed.nationality) $('f_nationality').value = parsed.nationality;
     if(parsed.lastName) $('f_lastName').value = parsed.lastName;
     if(parsed.firstName) $('f_firstName').value = parsed.firstName;
-    if(parsed.dob) $('f_dob').value = parsed.dob;
+    if(parsed.dob) $('f_dob').value = isoToDisplay(parsed.dob);
     if(parsed.sex) $('f_sex').value = parsed.sex;
-    if(parsed.expiryDate) $('f_expiryDate').value = parsed.expiryDate;
+    if(parsed.expiryDate) $('f_expiryDate').value = isoToDisplay(parsed.expiryDate);
 
     markFieldVerified('wrap_passport', parsed.valid.passport);
     markFieldVerified('wrap_dob', parsed.valid.dob);
@@ -1314,6 +1363,73 @@ $('scanZone').addEventListener('drop', (e)=>{
 
 // ---- Init ----
 checkSession();
+
+// ---- Populate select dropdowns ----
+(function(){
+  // POB + Authority wilayas
+  ['f_pob','f_authority'].forEach(id=>{
+    const sel = $(id);
+    WILAYAS.forEach(w=>{ const o=document.createElement('option'); o.value=w; o.textContent=w; sel.appendChild(o); });
+  });
+  // Nationalities
+  const natSel = $('f_nationality');
+  NATIONALITIES.forEach(n=>{ const o=document.createElement('option'); o.value=n.label; o.textContent=n.label+' ('+n.code+')'; natSel.appendChild(o); });
+  // Allow typing custom nationality
+  natSel.setAttribute('list','natlist');
+})();
+
+// ---- Auto-insert / in date fields ----
+['f_dob','f_issueDate','f_expiryDate','f_date'].forEach(id=>{
+  $(id).addEventListener('input', function(e){
+    let v = this.value.replace(/[^0-9]/g,'');
+    if(v.length > 2) v = v.slice(0,2) + '/' + v.slice(2);
+    if(v.length > 5) v = v.slice(0,5) + '/' + v.slice(5,8);
+    this.value = v;
+  });
+});
+
+// ---- Dark mode toggle ----
+(function(){
+  const saved = localStorage.getItem('theme');
+  if(saved === 'dark') document.documentElement.setAttribute('data-theme','dark');
+  $('themeToggle').onclick = ()=>{
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    if(isDark){
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.removeItem('theme');
+      $('themeToggle').textContent = '☀️';
+    } else {
+      document.documentElement.setAttribute('data-theme','dark');
+      localStorage.setItem('theme','dark');
+      $('themeToggle').textContent = '🌙';
+    }
+  };
+  // Set initial icon
+  if(saved === 'dark') $('themeToggle').textContent = '🌙';
+})();
+
+// ---- Date helpers (DD/MM/YYYY) ----
+function isoToDisplay(iso){
+  if(!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+  const [y,m,d] = iso.split('-');
+  return d+'/'+m+'/'+y;
+}
+function displayToIso(disp){
+  if(!disp) return '';
+  const parts = disp.split('/');
+  if(parts.length !== 3) return '';
+  const [d,m,y] = parts;
+  if(y.length!==4 || m.length!==2 || d.length!==2) return '';
+  if(parseInt(m)<1||parseInt(m)>12||parseInt(d)<1||parseInt(d)>31) return '';
+  return y+'-'+m+'-'+d;
+}
+function今天(){
+  const now = new Date();
+  const dd = String(now.getDate()).padStart(2,'0');
+  const mm = String(now.getMonth()+1).padStart(2,'0');
+  const yyyy = now.getFullYear();
+  return dd+'/'+mm+'/'+yyyy;
+}
 </script>
 </body>
 </html>
