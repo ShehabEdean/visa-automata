@@ -368,7 +368,7 @@
         <div class="field-row">
           <div class="field" id="wrap_passport">
             <label>N° de Passeport / Passport No.</label>
-            <input id="f_passport" type="text" placeholder="e.g. 123456789">
+            <input id="f_passport" type="text" placeholder="e.g. 123456789" inputmode="numeric" maxlength="9">
           </div>
           <div class="field" id="wrap_nationality">
             <label>Nationalité / Nationality</label>
@@ -1329,6 +1329,11 @@ checkSession();
   // Allow typing custom nationality
   natSel.setAttribute('list','natlist');
 })();
+
+// ---- Passport number: digits only, max 9 ----
+$('f_passport').addEventListener('input', function(){
+  this.value = this.value.replace(/[^0-9]/g,'').slice(0,9);
+});
 
 // ---- Auto-insert / in date fields ----
 ['f_dob','f_issueDate','f_expiryDate','f_date'].forEach(id=>{
