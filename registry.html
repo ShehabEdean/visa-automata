@@ -1331,6 +1331,11 @@ checkSession();
 })();
 
 // ---- Passport number: digits only, max 9 ----
+$('f_passport').addEventListener('keydown', function(e){
+  if(this.value.replace(/[^0-9]/g,'').length >= 9 && !['Backspace','Delete','ArrowLeft','ArrowRight','Tab','Home','End'].includes(e.key)){
+    e.preventDefault();
+  }
+});
 $('f_passport').addEventListener('input', function(){
   this.value = this.value.replace(/[^0-9]/g,'').slice(0,9);
 });
