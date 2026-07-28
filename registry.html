@@ -547,14 +547,12 @@ const _supabase = {
   auth: {
     async getSession(){
       if(_accessToken) return { data: { session: { access_token: _accessToken } }, error: null };
-      // Try to restore from localStorage
       const stored = localStorage.getItem('supabase_session');
       if(stored){
         try {
           const s = JSON.parse(stored);
           _accessToken = s.access_token;
           _refreshToken = s.refresh_token;
-          // Try refresh
           const res = await fetch(SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
             method:'POST', headers:_headers(),
             body: JSON.stringify({ refresh_token: _refreshToken })
@@ -592,87 +590,6 @@ const _supabase = {
       localStorage.removeItem('supabase_session');
     }
   },
-  from(table){
-    const self = this;
-    const _filters = [];
-    const _order = { col: null, asc: true };
-    const _single = { one: false, col: null };
-    const api = {
-      select(cols){
-        self._select = cols;
-        return api;
-      },
-      insert(row){
-        self._insert = row;
-        return api;
-      },
-      update(row){
-        self._update = row;
-        return api;
-      },
-      delete(){
-        self._delete = true;
-        return api;
-      },
-      eq(col, val){ _filters.push({col, op:'eq', val}); return api; },
-      order(col, opts){ _order.col = col; _order.asc = (opts&&opts.ascending!==false); return api; },
-      single(){ _single.one = true; return api; },
-      async then(resolve){
-        try {
-          let url = SUPABASE_URL + '/rest/v1/' + table;
-          const params = new URLSearchParams();
-          const opts = {};
-          const isSelect = !self._insert && !self._update && !self._delete;
-
-          if(isSelect){
-            params.set('select', self._select || '*');
-            _filters.forEach(f => {
-              if(f.op==='eq') params.set(f.col, 'eq.' + f.val);
-            });
-            if(_order.col) params.set('order', _order.col + (_order.asc ? '.asc' : '.desc'));
-            opts.method = 'GET';
-            opts.headers = _headers({ 'Prefer': 'return=representation' });
-          } else if(self._insert){
-            opts.method = 'POST';
-            opts.headers = _headers({ 'Prefer': 'return=representation' });
-            opts.body = JSON.stringify(self._insert);
-          } else if(self._update){
-            _filters.forEach(f => {
-              if(f.op==='eq') params.set(f.col, 'eq.' + f.val);
-            });
-            opts.method = 'PATCH';
-            opts.headers = _headers({ 'Prefer': 'return=representation' });
-            opts.body = JSON.stringify(self._update);
-          } else if(self._delete){
-            _filters.forEach(f => {
-              if(f.op==='eq') params.set(f.col, 'eq.' + f.val);
-            });
-            opts.method = 'DELETE';
-            opts.headers = _headers({ 'Prefer': 'return=representation' });
-          }
-
-          if(params.toString()) url += '?' + params.toString();
-          const res = await fetch(url, opts);
-          if(!res.ok){
-            const e = await res.json();
-            resolve({ data: null, error: { message: e.message || e.hint || 'Request failed' } });
-            return;
-          }
-          const data = await res.json();
-          resolve({ data: _single.one ? data[0] : data, error: null });
-        } catch(err){
-          resolve({ data: null, error: { message: err.message } });
-        }
-        // Reset state
-        self._select = null; self._insert = null; self._update = null; self._delete = null;
-        _filters.length = 0; _order.col = null; _single.one = false;
-      }
-    };
-    // Reset state for fresh chain
-    self._select = null; self._insert = null; self._update = null; self._delete = null;
-    _filters.length = 0; _order.col = null; _single.one = false;
-    return api;
-  },
   storage: {
     from(bucket){
       return {
@@ -681,23 +598,67 @@ const _supabase = {
         },
         async upload(path, file, opts){
           const url = SUPABASE_URL + '/storage/v1/object/' + bucket + '/' + path;
-          const res = await fetch(url, {
-            method: 'POST',
-            headers: _headers({ 'Content-Type': file.type || 'image/jpeg', 'x-upsert': (opts&&opts.upsert)?'true':'false' }),
-            body: file
-          });
+          const headers = _headers({ 'Content-Type': file.type || 'image/jpeg', 'x-upsert': (opts&&opts.upsert)?'true':'false' });
+          delete headers['Content-Type'];
+          headers['content-type'] = file.type || 'image/jpeg';
+          const res = await fetch(url, { method: 'POST', headers, body: file });
           if(!res.ok) return { error: { message: 'Upload failed' } };
           return { error: null };
         },
         async remove(paths){
-          const url = SUPABASE_URL + '/storage/v1/object/' + bucket + '/' + paths[0];
-          await fetch(url, { method:'DELETE', headers:_headers() });
+          for(const p of paths){
+            const url = SUPABASE_URL + '/storage/v1/object/' + bucket + '/' + p;
+            await fetch(url, { method:'DELETE', headers:_headers() });
+          }
           return { error: null };
         }
       };
     }
   }
 };
+
+// ---- Direct DB helpers (no thenable trickery) ----
+function _dbUrl(table){ return SUPABASE_URL + '/rest/v1/' + table; }
+
+async function dbSelect(table, { cols, filters, order, single }={}){
+  const url = new URL(_dbUrl(table));
+  url.searchParams.set('select', cols || '*');
+  (filters||[]).forEach(f => url.searchParams.set(f.col, 'eq.' + f.val));
+  if(order) url.searchParams.set('order', order.col + (order.asc !== false ? '.asc' : '.desc'));
+  const res = await fetch(url.toString(), { method:'GET', headers: _headers({ 'Prefer':'return=representation', 'Accept':'application/json' }) });
+  if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e.message || e.hint || 'Query failed'); }
+  const data = await res.json();
+  return single ? data[0] : data;
+}
+
+async function dbInsert(table, row){
+  const res = await fetch(_dbUrl(table), {
+    method:'POST',
+    headers: _headers({ 'Prefer':'return=representation' }),
+    body: JSON.stringify(row)
+  });
+  if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e.message || e.hint || 'Insert failed'); }
+  return (await res.json())[0];
+}
+
+async function dbUpdate(table, row, filters){
+  const url = new URL(_dbUrl(table));
+  (filters||[]).forEach(f => url.searchParams.set(f.col, 'eq.' + f.val));
+  const res = await fetch(url.toString(), {
+    method:'PATCH',
+    headers: _headers({ 'Prefer':'return=representation' }),
+    body: JSON.stringify(row)
+  });
+  if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e.message || e.hint || 'Update failed'); }
+  return (await res.json())[0];
+}
+
+async function dbDelete(table, filters){
+  const url = new URL(_dbUrl(table));
+  (filters||[]).forEach(f => url.searchParams.set(f.col, 'eq.' + f.val));
+  const res = await fetch(url.toString(), { method:'DELETE', headers: _headers({ 'Prefer':'return=representation' }) });
+  if(!res.ok){ const e = await res.json().catch(()=>({})); throw new Error(e.message || e.hint || 'Delete failed'); }
+}
 
 // ---- Constants ----
 const CATEGORIES = [
@@ -823,19 +784,10 @@ $('logoutBtn').onclick = async ()=>{
 // ---- Data ----
 async function loadEntries(){
   try {
-    const { data, error } = await _supabase
-      .from('applications')
-      .select('*')
-      .order('date_added', { ascending: false });
-    if(error){
-      console.error('loadEntries error:', error);
-      toast('Error loading data: ' + error.message);
-      entries = [];
-    } else {
-      entries = data || [];
-    }
+    const data = await dbSelect('applications', { order: { col: 'date_added', asc: false } });
+    entries = data || [];
   } catch(err) {
-    console.error('loadEntries catch:', err);
+    console.error('loadEntries error:', err);
     toast('Connection error');
     entries = [];
   }
@@ -917,16 +869,18 @@ function renderTable(){
     tr.querySelector('.del').onclick = async (ev)=>{
       ev.stopPropagation();
       if(!confirm(`Delete the entry for ${e.last_name||'this person'}?`)) return;
-      const { error } = await _supabase.from('applications').delete().eq('id', e.id);
-      if(error){ toast('Delete failed'); return; }
-      // Also delete image if exists
-      if(e.has_image){
-        await _supabase.storage.from('scans').remove([`scans/${e.id}.jpg`]);
+      try {
+        await dbDelete('applications', [{col:'id', val:e.id}]);
+        if(e.has_image){
+          await _supabase.storage.from('scans').remove([`scans/${e.id}.jpg`]);
+        }
+        entries = entries.filter(x=>x.id!==e.id);
+        renderTabs();
+        renderTable();
+        toast('Entry deleted');
+      } catch(err){
+        toast('Delete failed');
       }
-      entries = entries.filter(x=>x.id!==e.id);
-      renderTabs();
-      renderTable();
-      toast('Entry deleted');
     };
     tbody.appendChild(tr);
   });
@@ -1069,28 +1023,23 @@ $('saveBtn').onclick = async ()=>{
 
   try {
     if(editingId){
-      const { error } = await _supabase.from('applications').update(data).eq('id', editingId);
-      if(error) throw error;
+      await dbUpdate('applications', data, [{col:'id', val:editingId}]);
 
-      // Handle image upload/remove
       if(pendingImageRemoved){
         await _supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
-        await _supabase.from('applications').update({ has_image: false }).eq('id', editingId);
+        await dbUpdate('applications', { has_image: false }, [{col:'id', val:editingId}]);
       } else if(pendingUploadFile){
         await _supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
-        await _supabase.from('applications').update({ has_image: true }).eq('id', editingId);
+        await dbUpdate('applications', { has_image: true }, [{col:'id', val:editingId}]);
       }
     } else {
-      // Insert to get an ID
-      const { data: inserted, error } = await _supabase.from('applications').insert(data).select().single();
-      if(error) throw error;
+      const inserted = await dbInsert('applications', data);
       editingId = inserted.id;
       entries.unshift(inserted);
 
-      // Upload image if any
       if(pendingUploadFile){
         await _supabase.storage.from('scans').upload(`scans/${editingId}.jpg`, pendingUploadFile, { upsert: true });
-        await _supabase.from('applications').update({ has_image: true }).eq('id', editingId);
+        await dbUpdate('applications', { has_image: true }, [{col:'id', val:editingId}]);
       }
     }
 
@@ -1110,17 +1059,20 @@ $('saveBtn').onclick = async ()=>{
 $('deleteBtn').onclick = async ()=>{
   if(!editingId) return;
   if(!confirm('Delete this entry permanently?')) return;
-  const { error } = await _supabase.from('applications').delete().eq('id', editingId);
-  if(error){ toast('Delete failed'); return; }
-  const entry = entries.find(x=>x.id===editingId);
-  if(entry && entry.has_image){
-    await _supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
+  try {
+    await dbDelete('applications', [{col:'id', val:editingId}]);
+    const entry = entries.find(x=>x.id===editingId);
+    if(entry && entry.has_image){
+      await _supabase.storage.from('scans').remove([`scans/${editingId}.jpg`]);
+    }
+    entries = entries.filter(x=>x.id!==editingId);
+    renderTabs();
+    renderTable();
+    closeModal();
+    toast('Entry deleted');
+  } catch(err){
+    toast('Delete failed');
   }
-  entries = entries.filter(x=>x.id!==editingId);
-  renderTabs();
-  renderTable();
-  closeModal();
-  toast('Entry deleted');
 };
 
 // ---- Search ----
