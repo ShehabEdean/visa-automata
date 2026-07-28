@@ -390,7 +390,7 @@
         <div class="field-row tri">
           <div class="field" id="wrap_dob">
             <label>Date de Naissance / DOB</label>
-            <input id="f_dob" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
+            <input id="f_dob" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
           </div>
           <div class="field">
             <label>Lieu de Naissance / POB</label>
@@ -410,11 +410,11 @@
         <div class="field-row">
           <div class="field">
             <label>Date de Délivrance / Issue Date</label>
-            <input id="f_issueDate" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
+            <input id="f_issueDate" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
           </div>
           <div class="field" id="wrap_expiryDate">
             <label>Date d'Expiration / Expiry Date</label>
-            <input id="f_expiryDate" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
+            <input id="f_expiryDate" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
           </div>
         </div>
         <div class="field-row">
@@ -470,7 +470,7 @@
       <div class="field-row">
           <div class="field">
             <label>Date added</label>
-            <input id="f_date" type="text" placeholder="DD/MM/YYYY" maxlength="10" inputmode="numeric">
+            <input id="f_date" type="text" placeholder="DD/MM/YYYY" inputmode="numeric">
           </div>
         <div class="field">
           <label>&nbsp;</label>
@@ -1333,21 +1333,18 @@ checkSession();
 // ---- Auto-insert / in date fields ----
 ['f_dob','f_issueDate','f_expiryDate','f_date'].forEach(id=>{
   $(id).addEventListener('input', function(e){
-    let v = this.value.replace(/[^0-9]/g,'');
-    if(v.length > 8) v = v.slice(0,8);
-    if(v.length > 2){
-      let dd = parseInt(v.slice(0,2),10);
-      if(dd > 31) dd = 31;
-      if(dd < 1 && v.slice(0,2) !== '00') dd = 1;
-      v = String(dd).padStart(2,'0') + '/' + v.slice(2);
-    }
-    if(v.length > 5){
-      let mm = parseInt(v.slice(3,5),10);
-      if(mm > 12) mm = 12;
-      if(mm < 1 && v.slice(3,5) !== '00') mm = 1;
-      v = v.slice(0,3) + String(mm).padStart(2,'0') + '/' + v.slice(5);
-    }
-    this.value = v;
+    let raw = this.value.replace(/[^0-9]/g,'').slice(0,8);
+    let dd = raw.slice(0,2);
+    let mm = raw.slice(2,4);
+    let yyyy = raw.slice(4,8);
+    if(parseInt(dd,10) > 31) dd = '31';
+    if(parseInt(dd,10) < 1 && raw.length >= 2) dd = '01';
+    if(parseInt(mm,10) > 12) mm = '12';
+    if(parseInt(mm,10) < 1 && raw.length >= 4) mm = '01';
+    let out = dd;
+    if(raw.length > 2) out += '/' + mm;
+    if(raw.length > 4) out += '/' + yyyy;
+    this.value = out;
   });
 });
 
